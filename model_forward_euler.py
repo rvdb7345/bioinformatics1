@@ -169,8 +169,29 @@ class MartinezModel(object):
         plt.ylabel('BCL6')
         plt.show()
 
+    def sensitivity_analysis(self, t_start, t_end, t_step, y_param, x_parameter, x_values):
+        if y_param in ['b', 'bcl6', 'BCL6']:
+            y_index = 0
+        elif y_param in ['p', 'blimp1', 'BLIMP1']:
+            y_index = 1
+        elif y_param in ['r', 'irf4', 'IRF4']:
+            y_index = 2
+        else:
+            print('y parameter not recognised')
 
+        end_values = np.zeros(len(x_values))
 
+        for i, param_value in enumerate(x_values):
+            setattr(self, x_parameter, param_value)
+            self.time_evolution(t_start, t_end, t_step)
+            end_values[i] = self.soln[-1, y_index]
+
+        plt.figure()
+        plt.plot(x_values, end_values)
+        plt.xlabel(x_parameter)
+        plt.ylabel(y_param)
+        plt.grid()
+        plt.show()
 
 
 if __name__ == '__main__':
@@ -223,6 +244,12 @@ if __name__ == '__main__':
                           lambda_b, b0, p0, r0, cd0_signal, bcr0_signal, t_BCR_begin,
                           t_BCR_end, t_cd40_begin, t_cd40_end)
 
-    soln, t_list = model.time_evolution(t_start, t_end, t_step)
-    model.plot_evolution()
-    model.beta_phase_plot()
+    # soln, t_list = model.time_evolution(t_start, t_end, t_step)
+    # model.plot_evolution()
+    # model.beta_phase_plot()
+
+    model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'mu_p', np.arange(0, 15))
+    model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'mu_b', np.arange(0, 25))
+    model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'mu_r', np.arange(0, 0.3, 0.1))
+    # model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'mu_p', np.arange(0, 15))
+    # model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'mu_p', np.arange(0, 15))
