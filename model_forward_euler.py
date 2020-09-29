@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 from scipy.integrate import odeint, solve_ivp
 import matplotlib.pyplot as plt
-
+from numba import jit
+import tqdm
 
 class ForwardEuler(object):
     """
@@ -65,7 +66,7 @@ class MartinezModel(object):
 
 
     def __init__(self, mu_p, sigma_p, k_p, lambda_p, mu_b, sigma_b, k_b,
-                 lambda_b, b0, p0, r0, cd0_signal, bcr0_signal, t_BCR_begin,
+                 lambda_b, mu_r, sigma_r, k_r, lambda_r, b0, p0, r0, cd0_signal, bcr0_signal, t_BCR_begin,
                  t_BCR_end, t_cd40_begin, t_cd40_end):
 
         self.mu_p = mu_p
@@ -116,11 +117,13 @@ class MartinezModel(object):
         self.BCR_list[k] = BCR
         self.CD40_list[k] = CD40
 
-        dpdt = self.mu_p + self.sigma_p * self.k_b ** 2 / (self.k_b ** 2 + b ** 2) + self.sigma_p * \
-               r ** 2 / (self.k_r ** 2 + r ** 2) - self.lambda_p * p
+        dpdt = self.mu_p + self.sigma_p * self.k_b ** 2 / (self.k_b ** 2 + b ** 2) + \
+               self.sigma_p * r ** 2 / (self.k_r ** 2 + r ** 2) - self.lambda_p * p
 
-        dbdt = self.mu_b + self.sigma_b * self.k_b ** 2 / (self.k_b ** 2 + b ** 2) * self.k_p ** 2 / \
-               (self.k_p ** 2 + p ** 2) * self.k_r ** 2 / (self.k_r ** 2 + r ** 2) - \
+        dbdt = self.mu_b + self.sigma_b * \
+               self.k_b ** 2 / (self.k_b ** 2 + b ** 2) * \
+               self.k_p ** 2 / (self.k_p ** 2 + p ** 2) * \
+               self.k_r ** 2 / (self.k_r ** 2 + r ** 2) - \
                (self.lambda_b + BCR) * b
 
         drdt = self.mu_r + self.sigma_r * r ** 2 / (self.k_r ** 2 + r ** 2) + CD40 - self.lambda_r * r
@@ -134,7 +137,7 @@ class MartinezModel(object):
         self.CD40_list = np.zeros(len(self.t_list))
 
         solver_object = ForwardEuler(self.equations)
-        solver_object.set_initial_condition([b0, p0, r0])
+        solver_object.set_initial_condition([self.b0, self.p0, self.r0])
         self.soln, self.t_list = solver_object.solve(self.t_list)
 
         return self.soln, self.t_list
@@ -152,6 +155,17 @@ class MartinezModel(object):
         plt.plot(self.t_list, self.CD40_list, label='CD40', color='blue')
         plt.ylabel('Concentration')
         plt.xlabel('Time')
+        plt.legend()
+        plt.grid()
+        plt.title('Concentration over time')
+        plt.show()
+
+        plt.figure()
+        plt.plot(self.t_list, self.BCR_list, label='BCR', color='orange')
+        plt.plot(self.t_list, self.CD40_list, label='CD40', color='blue')
+        plt.ylabel('Concentration')
+        plt.xlabel('Time')
+        plt.xlim(3.8, 5.2)
         plt.legend()
         plt.grid()
         plt.title('Concentration over time')
@@ -184,14 +198,113 @@ class MartinezModel(object):
         for i, param_value in enumerate(x_values):
             setattr(self, x_parameter, param_value)
             self.time_evolution(t_start, t_end, t_step)
+            # self.plot_evolution()
             end_values[i] = self.soln[-1, y_index]
 
         plt.figure()
-        plt.plot(x_values, end_values)
+        plt.scatter(x_values, end_values)
         plt.xlabel(x_parameter)
         plt.ylabel(y_param)
         plt.grid()
         plt.show()
+
+
+class BCRSubNetwork(MartinezModel):
+    def equations(self, y, t, k):
+        if self.nullcline_plot_bcl6:
+            b, p, r = y
+
+            BCR = self.BCR
+            CD40 = 0
+
+            b = self.b0
+
+            dpdt = self.mu_p + self.sigma_p * self.k_b ** 2 / (self.k_b ** 2 + b ** 2) - self.lambda_p * p
+
+            dbdt = 0
+
+            drdt = self.mu_r + self.sigma_r * r ** 2 / (self.k_r ** 2 + r ** 2) + CD40 - self.lambda_r * r
+
+        if self.nullcline_plot_blimp1:
+            b, p, r = y
+
+            BCR = self.BCR
+            CD40 = 0
+
+            p = self.p0
+
+            dpdt = 0
+
+            dbdt = self.mu_b + self.sigma_b * self.k_b ** 2 / (self.k_b ** 2 + b ** 2) * self.k_p ** 2 / \
+               (self.k_p ** 2 + p ** 2) - (self.lambda_b + BCR) * b
+
+            drdt = self.mu_r + self.sigma_r * r ** 2 / (self.k_r ** 2 + r ** 2) + CD40 - self.lambda_r * r
+
+        return [dbdt, dpdt, drdt]
+
+    def nullclines_trajectories(self, BCR, t_start, t_end, t_step):
+        self.nullcline_plot_blimp1 = False
+        self.nullcline_plot_bcl6 = True
+        self.BCR = BCR
+
+        BCL6_list = np.arange(0, 5.5, 0.25)
+
+        blimp1_end_values = np.zeros(len(BCL6_list))
+
+        for (i, bcl6) in enumerate(BCL6_list):
+            self.b0 = bcl6
+            self.time_evolution(t_start, t_end, t_step)
+            blimp1_end_values[i] = self.soln[-1, 1]
+
+        self.nullcline_plot_bcl6 = False
+        self.nullcline_plot_blimp1 = True
+
+        BLIMP1_list = np.arange(0, 5.5, 0.25)
+
+        bcl6_end_values = np.zeros(len(BLIMP1_list))
+
+        for (i, blimp1) in enumerate(BLIMP1_list):
+            self.p0 = blimp1
+            self.time_evolution(t_start, t_end, t_step)
+            # self.plot_evolution()
+            bcl6_end_values[i] = self.soln[-1, 0]
+
+        plt.figure()
+        plt.scatter(BCL6_list, blimp1_end_values, label='BCL6 fixed')
+        plt.scatter(bcl6_end_values, BLIMP1_list, label='BLIMP1 fixed')
+        plt.xlabel('BCL6')
+        plt.ylabel('BLIMP1')
+        plt.legend()
+        plt.show()
+
+
+
+class CD40SubNetwork(MartinezModel):
+    def equations(self, y, t, k):
+        b, p, r = y
+
+        bcr0 = 0
+        cd0 = 0
+
+        if self.t_cd40_end >= t >= self.t_cd40_begin:
+            cd0 = self.cd0_signal
+
+        BCR = bcr0 * self.k_b ** 2 / (self.k_b ** 2 + b ** 2)
+        CD40 = cd0 * self.k_b ** 2 / (self.k_b ** 2 + b ** 2)
+
+        self.BCR_list[k] = BCR
+        self.CD40_list[k] = CD40
+
+        dpdt = self.mu_p + self.sigma_p * self.k_b ** 2 / (self.k_b ** 2 + b ** 2) + self.sigma_p * \
+               r ** 2 / (self.k_r ** 2 + r ** 2) - self.lambda_p * p
+
+        dbdt = self.mu_b + self.sigma_b * self.k_b ** 2 / (self.k_b ** 2 + b ** 2) * self.k_p ** 2 / \
+               (self.k_p ** 2 + p ** 2) * self.k_r ** 2 / (self.k_r ** 2 + r ** 2) - \
+               (self.lambda_b + BCR) * b
+
+        drdt = self.mu_r + self.sigma_r * r ** 2 / (self.k_r ** 2 + r ** 2) + CD40 - self.lambda_r * r
+
+        return [dbdt, dpdt, drdt]
 
 
 if __name__ == '__main__':
@@ -202,15 +315,40 @@ if __name__ == '__main__':
          - k: dissociation constant
          - lambda: degradation rate
     '''
+    #
+    # # parameters corresponding to BLIMP1 (p)
+    # mu_p = 10 ** (-6)
+    # sigma_p = 9.0
+    # k_p = 1.0
+    # lambda_p = 1.0
+    #
+    # # parameters corresponding to BCL-6 (b)
+    # mu_b = 2
+    # sigma_b = 100
+    # k_b = 1.0
+    # lambda_b = 1.0
+    #
+    # # parameters corersponding to IRF-4 (r)
+    # mu_r = 0.1
+    # sigma_r = 2.6
+    # k_r = 1.0
+    # lambda_r = 1.0
+    #
+    # # parameters characterising the initial state
+    # b0 = 5
+    # p0 = 0
+    # r0 = 0
+    # cd0_signal = 10
+    # bcr0_signal = 13
 
     # parameters corresponding to BLIMP1 (p)
-    mu_p = 1 ** (-6)
-    sigma_p = 9.0
-    k_p = 1.0
+    mu_p = 10 ** (-6)
+    sigma_p = 5
+    k_p = 1
     lambda_p = 1.0
 
     # parameters corresponding to BCL-6 (b)
-    mu_b = 2
+    mu_b = 0.9
     sigma_b = 100
     k_b = 1.0
     lambda_b = 1.0
@@ -225,31 +363,63 @@ if __name__ == '__main__':
     b0 = 5
     p0 = 0
     r0 = 0
-    cd0_signal = 20
-    bcr0_signal = 5
+    cd0_signal = 10
+    bcr0_signal = 13
 
-    t_start = -20
-    t_end = 50
-    t_step = 0.001
+    t_start = 0
+    t_end = 100
+    t_step = 0.01
 
-    t_BCR_begin = 4
-    t_BCR_end = 4.1
+    t_BCR_begin = 24
+    t_BCR_end = 24.1
 
-    t_cd40_begin = 5
-    t_cd40_end = 5.125
-
+    t_cd40_begin = 30
+    t_cd40_end = 30.125
 
     # instantiate the model with the correct parameters
-    model = MartinezModel(mu_p, sigma_p, k_p, lambda_p, mu_b, sigma_b, k_b,
+    # full_model = MartinezModel(mu_p, sigma_p, k_p, lambda_p, mu_b, sigma_b, k_b,
+    #                       lambda_b, b0, p0, r0, cd0_signal, bcr0_signal, t_BCR_begin,
+    #                       t_BCR_end, t_cd40_begin, t_cd40_end)
+    # #
+    # soln, t_list = full_model.time_evolution(t_start, t_end, t_step)
+    # full_model.plot_evolution()
+    # full_model.beta_phase_plot()
+
+    # full_model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'mu_p', np.arange(0, 15))
+    # full_model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'mu_b', np.arange(0, 25))
+    # full_model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'mu_r', np.arange(0, 0.5, 0.01))
+    #
+    # full_model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'sigma_p', np.arange(0, 40))
+    # full_model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'sigma_b', np.arange(0, 10))
+    # full_model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'sigma_r', np.arange(0, 5, 0.5))
+    #
+    # full_model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'lambda_p', np.arange(0, 8, 0.5))
+    # full_model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'lambda_b', np.arange(0, 8, 0.5))
+    # full_model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'lambda_r', np.arange(0, 3, 0.2))
+    #
+    # full_model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'k_p', np.arange(0, 8, 0.5))
+    # full_model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'k_b', np.arange(0, 15, 1))
+    # full_model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'k_r', np.arange(0, 3, 0.2))
+
+
+    # t_1 = np.arange(0,2+1)
+    # t_2 = np.arange(2, 3, 0.05)
+    # t_3 = np.arange(3, 5)
+    # np.append(t_1, np.append(t_2, t_3))
+    # full_model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'bcr0_signal', np.arange(0, 50))
+
+
+    # t_BCR_begin = t_start
+    # t_BCR_end = t_end+1
+    #
+    # t_cd40_begin = 0
+    # t_cd40_end = 0
+    #
+    BCR_network_model = BCRSubNetwork(mu_p, sigma_p, k_p, lambda_p, mu_b, sigma_b, k_b,
                           lambda_b, b0, p0, r0, cd0_signal, bcr0_signal, t_BCR_begin,
                           t_BCR_end, t_cd40_begin, t_cd40_end)
 
-    # soln, t_list = model.time_evolution(t_start, t_end, t_step)
-    # model.plot_evolution()
-    # model.beta_phase_plot()
+    # BCR_network_model.time_evolution(t_start, t_end, t_step)
+    # BCR_network_model.plot_evolution()
 
-    model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'mu_p', np.arange(0, 15))
-    model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'mu_b', np.arange(0, 25))
-    model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'mu_r', np.arange(0, 0.3, 0.1))
-    # model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'mu_p', np.arange(0, 15))
-    # model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'mu_p', np.arange(0, 15))
+    BCR_network_model.nullclines_trajectories(15, t_start, t_end, t_step)
