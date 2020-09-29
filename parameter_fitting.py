@@ -1,5 +1,4 @@
-from array import array
-
+import multiprocessing
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -91,14 +90,14 @@ class CD40SubNetwork(object):
         self.p0 = 0
         self.r0 = 0
 
-        self.cd0_signal = 10
-        self.bcr0_signal = 3
+        self.cd0_signal = 50
+        self.bcr0_signal = 53
 
-        self.t_BCR_begin = 5
-        self.t_BCR_end = 5.1
+        self.t_BCR_begin = 65
+        self.t_BCR_end = 65.1
 
-        self.t_cd40_begin = 7.1
-        self.t_cd40_end = 7.3
+        self.t_cd40_begin = 70.1
+        self.t_cd40_end = 70.2
 
     def equations(self, y, t, k):
         b, p, r = y
@@ -181,7 +180,7 @@ def fitness(ind):
     # calculate the mse for the three components. If it one of the components has exploded into infinity, fitness is low
     mse = 0
     if sum(sum(np.isinf(soln))) == 0 and sum(sum(np.isnan(soln))) == 0:
-        for (i, protein) in enumerate(['PRDM1', 'BCL6', 'IRF4']):
+        for (i, protein) in enumerate(['BCL6', 'PRDM1', 'IRF4']):
             mse += mean_squared_error(soln[t_list_indices_affymetrix_data, i], affymetrix_df[protein])
     else:
         mse = 100000
@@ -196,16 +195,32 @@ def generateES(ind_cls, strg_cls, size):
     return ind
 
 
+# this needs to be before the if __name__ blabla to make the multiprocessing work
+affymetrix_df = pd.read_csv('affymetrix_data.csv')
+
+creator.create("Strategy", np.ndarray)
+creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
+creator.create("Individual", np.ndarray, fitness=creator.FitnessMin)
+
+toolbox = base.Toolbox()
+IND_SIZE = 6
+toolbox.register("evaluate", fitness)
+toolbox.register("individual", generateES, creator.Individual, creator.Strategy,
+    IND_SIZE)
+toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+
+toolbox.register("mate", tools.cxESBlend, alpha=0.1)
+toolbox.register("mutate", tools.mutESLogNormal, c=1.0, indpb=0.3)
+toolbox.register("select", tools.selTournament, tournsize=5)
 
 if __name__ == '__main__':
-    affymetrix_df = pd.read_csv('affymetrix_data.csv')
 
     # plot figure showing the affymetrix data as if it is a time series
     ax = plt.gca()
 
-    affymetrix_df.plot(kind='line', y='PRDM1', ax=ax)
-    affymetrix_df.plot(kind='line', y='BCL6', ax=ax)
-    affymetrix_df.plot(kind='line', y='IRF4', ax=ax)
+    affymetrix_df.plot(kind='line', y='PRDM1', ax=ax, color='black')
+    affymetrix_df.plot(kind='line', y='BCL6', ax=ax, color='red')
+    affymetrix_df.plot(kind='line', y='IRF4', ax=ax, color='green')
 
     plt.text(2.01, 8, r'CB', color='black')
     plt.axvline(x=4, linestyle='--', color='black')
@@ -218,23 +233,8 @@ if __name__ == '__main__':
 
     # EA stuff starts
 
-    creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
-    creator.create("Individual", np.ndarray, typecode="d", fitness=creator.FitnessMin, strategy=None)
-    creator.create("Strategy", np.ndarray, typecode="d")
-
-    toolbox = base.Toolbox()
-
-    toolbox.register("evaluate", fitness)
-
-    IND_SIZE = 6
-
-    toolbox.register("individual", generateES, creator.Individual, creator.Strategy,
-        IND_SIZE)
-    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-
-    toolbox.register("mate", tools.cxESBlend, alpha=0.1)
-    toolbox.register("mutate", tools.mutESLogNormal, c=1.0, indpb=0.3)
-    toolbox.register("select", tools.selTournament, tournsize=3)
+    pool = multiprocessing.Pool(multiprocessing.cpu_count())
+    toolbox.register("map", pool.map)
 
     stats = tools.Statistics(lambda ind: ind.fitness.values)
     stats.register("avg", np.mean)
@@ -242,8 +242,19 @@ if __name__ == '__main__':
     stats.register("min", np.min)
     stats.register("max", np.max)
 
-    hof = tools.HallOfFame(10)
+    hof = tools.HallOfFame(1, similar=np.array_equal)
 
-    pop = toolbox.population(n=20)
+    hof.clear()
 
-    pop, logbook = algorithms.eaSimple(pop, toolbox, cxpb=0.6, mutpb=0.3, ngen=10, stats=stats,  verbose=True)
+    pop = toolbox.population(n=30)
+
+    pop, logbook = algorithms.eaMuCommaLambda(pop, toolbox, mu=19, lambda_=50, cxpb=0.6, mutpb=0.4,
+                                              ngen=50, stats=stats, halloffame=hof, verbose=True)
+
+    # show what the best solution looks like
+    best_sol = CD40SubNetwork(*hof[0])
+    t_start = 0
+    t_end = 100
+    t_step = 0.01
+    soln, t_list = best_sol.time_evolution(t_start, t_end, t_step)
+    best_sol.plot_evolution()
