@@ -138,25 +138,47 @@ class CD40SubNetwork(object):
 
         return self.soln, self.t_list
 
-def generateES(ind_cls, strg_cls, size):
-    ind = ind_cls(random.gauss(0, 10) for _ in range(size))
-    ind.strategy = strg_cls(random.gauss(0,10) for _ in range(size))
-    return ind
+    def plot_evolution(self):
+        b = self.soln[:, 0]
+        p = self.soln[:, 1]
+        r = self.soln[:, 2]
 
-toolbox = base.Toolbox()
+        plt.figure()
+        plt.plot(self.t_list, p, label='BLIMP1', color='black')
+        plt.plot(self.t_list, b, label='BCL-6', color='red')
+        plt.plot(self.t_list, r, label='IRF-4', color='green')
+        plt.plot(self.t_list, self.BCR_list, label='BCR', color='orange')
+        plt.plot(self.t_list, self.CD40_list, label='CD40', color='blue')
+        plt.ylabel('Concentration')
+        plt.xlabel('Time')
+        plt.legend()
+        plt.grid()
+        plt.title('Concentration over time')
+        plt.show()
 
 
 def fitness(ind):
+    '''
+    Calculates the fitness of an individual as the mse on the time series
+    :param ind: an array containing the parameters we want to be fitting
+    :return: the fitness of an individual, the lower the better tho
+    '''
+
+    # instantiate an individual
     model_ind = CD40SubNetwork(*ind)
 
+    # calculate the concentration development over time for the given parameters
     t_start = 0
     t_end = 100
     t_step = 0.01
     soln, t_list = model_ind.time_evolution(t_start, t_end, t_step)
+
+    # we have very little data points of the affymetrix data, but it does need to line up, so this is a first attempt
+    # can probably be greatly improved tho
     t_list = np.linspace(t_start, t_end-1, len(affymetrix_df['BCL6'])) / t_step
     t_list_indices_affymetrix_data = list(map(int, t_list))
 
-
+    # calculate the mse for the three components. If it one of the components has exploded into infinity, fitness is low
     mse = 0
     if sum(sum(np.isinf(soln))) == 0 and sum(sum(np.isnan(soln))) == 0:
         for (i, protein) in enumerate(['PRDM1', 'BCL6', 'IRF4']):
@@ -164,16 +186,21 @@ def fitness(ind):
     else:
         mse = 100000
 
-        return mse,
+    return mse,
+
+
+def generateES(ind_cls, strg_cls, size):
+
+    ind = ind_cls(random.gauss(0, 10) for _ in range(size))
+    ind.strategy = strg_cls(random.gauss(0,10) for _ in range(size))
+    return ind
+
+
 
 if __name__ == '__main__':
     affymetrix_df = pd.read_csv('affymetrix_data.csv')
 
-    plt.figure()
-    plt.plot(affymetrix_df['IRF4'])
-    plt.show()
-
-    # gca stands for 'get current axis'
+    # plot figure showing the affymetrix data as if it is a time series
     ax = plt.gca()
 
     affymetrix_df.plot(kind='line', y='PRDM1', ax=ax)
@@ -189,22 +216,18 @@ if __name__ == '__main__':
     plt.text(12.01, 8, r'PC', color='red')
     plt.show()
 
+    # EA stuff starts
 
     creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
-
     creator.create("Individual", np.ndarray, typecode="d", fitness=creator.FitnessMin, strategy=None)
-
     creator.create("Strategy", np.ndarray, typecode="d")
 
-
-
-
+    toolbox = base.Toolbox()
 
     toolbox.register("evaluate", fitness)
 
     IND_SIZE = 6
 
-    # generation functions
     toolbox.register("individual", generateES, creator.Individual, creator.Strategy,
         IND_SIZE)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
