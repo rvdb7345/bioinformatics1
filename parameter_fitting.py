@@ -7,6 +7,7 @@ from deap import algorithms
 from deap import base
 from deap import creator
 from deap import tools
+from scipy.optimize import fsolve
 import random
 
 class ForwardEuler(object):
@@ -68,14 +69,61 @@ class ForwardEuler(object):
 class CD40SubNetwork(object):
     """ A class containing the parameters, equations and necessary functions for the standard Martinez model """
 
-    def __init__(self, mu_p, sigma_p, mu_b, sigma_b, mu_r, sigma_r):
+    # def __init__(self, mu_p, sigma_p, mu_b, sigma_b, mu_r, sigma_r):
+    #
+    #     # self.mu_p = mu_p
+    #     # self.mu_b = mu_b
+    #     # self.mu_r = mu_r
+    #     #
+    #     # self.sigma_p = sigma_p
+    #     # self.sigma_b = sigma_b
+    #     # self.sigma_r = sigma_r
+    #
+    #     self.mu_p = 10 ** (-6)
+    #     self.mu_b = 2
+    #     self.mu_r = mu_r
+    #
+    #     self.sigma_p = 9
+    #     self.sigma_b = 100
+    #     self.sigma_r = sigma_r
+    #
+    #
+    #     self.k_p = 1
+    #     self.k_b = 1
+    #     self.k_r = 1
+    #
+    #     self.lambda_p = 1
+    #     self.lambda_b = 1
+    #     self.lambda_r = 1
+    #
+    #     self.b0 = 5
+    #     self.p0 = 0
+    #     self.r0 = 0
+    #
+    #     self.cd0_signal = 50
+    #     self.bcr0_signal = 0
+    #
+    #     self.t_BCR_begin = 65
+    #     self.t_BCR_end = 65.1
+    #
+    #     self.t_cd40_begin = 70.1
+    #     self.t_cd40_end = 70.2
 
-        self.mu_p = mu_p
-        self.mu_b = mu_b
+    def __init__(self, mu_r, sigma_r):
+        # self.mu_p = mu_p
+        # self.mu_b = mu_b
+        # self.mu_r = mu_r
+        #
+        # self.sigma_p = sigma_p
+        # self.sigma_b = sigma_b
+        # self.sigma_r = sigma_r
+
+        self.mu_p = 10 ** (-6)
+        self.mu_b = 2
         self.mu_r = mu_r
 
-        self.sigma_p = sigma_p
-        self.sigma_b = sigma_b
+        self.sigma_p = 9
+        self.sigma_b = 100
         self.sigma_r = sigma_r
 
         self.k_p = 1
@@ -91,7 +139,7 @@ class CD40SubNetwork(object):
         self.r0 = 0
 
         self.cd0_signal = 50
-        self.bcr0_signal = 53
+        self.bcr0_signal = 0
 
         self.t_BCR_begin = 65
         self.t_BCR_end = 65.1
@@ -123,13 +171,25 @@ class CD40SubNetwork(object):
 
         drdt = self.mu_r + self.sigma_r * r ** 2 / (self.k_r ** 2 + r ** 2) + CD40 - self.lambda_r * r
 
+        self.drdt_list[self.counter] = drdt
+        self.dpdt_list[self.counter] = dpdt
+        self.dbdt_list[self.counter] = dbdt
+
+        self.counter += 1
+
         return [dbdt, dpdt, drdt]
 
     def time_evolution(self, t_start, t_end, t_step):
+        self.counter = 0
         self.t_list = np.arange(t_start, t_end, t_step)
 
         self.BCR_list = np.zeros(len(self.t_list))
         self.CD40_list = np.zeros(len(self.t_list))
+
+        self.drdt_list = np.zeros(len(self.t_list))
+        self.dpdt_list = np.zeros(len(self.t_list))
+        self.dbdt_list = np.zeros(len(self.t_list))
+
 
         solver_object = ForwardEuler(self.equations)
         solver_object.set_initial_condition([self.b0, self.p0, self.r0])
@@ -146,13 +206,36 @@ class CD40SubNetwork(object):
         plt.plot(self.t_list, p, label='BLIMP1', color='black')
         plt.plot(self.t_list, b, label='BCL-6', color='red')
         plt.plot(self.t_list, r, label='IRF-4', color='green')
-        plt.plot(self.t_list, self.BCR_list, label='BCR', color='orange')
-        plt.plot(self.t_list, self.CD40_list, label='CD40', color='blue')
+        # plt.plot(self.t_list, self.BCR_list, label='BCR', color='orange')
+        # plt.plot(self.t_list, self.CD40_list, label='CD40', color='blue')
         plt.ylabel('Concentration')
         plt.xlabel('Time')
         plt.legend()
         plt.grid()
         plt.title('Concentration over time')
+        plt.show()
+
+    def calc_stablepoints(self):
+        b_stablepoints = np.where(np.diff(np.sign(np.around(self.dbdt_list, 2))))[0]
+        p_stablepoints = np.where(np.diff(np.sign(self.dpdt_list)))[0]
+        r_stablepoints = np.where(np.diff(np.sign(self.drdt_list)))[0]
+
+        print(b_stablepoints, p_stablepoints, r_stablepoints)
+
+        b = self.soln[:, 0]
+        p = self.soln[:, 1]
+        r = self.soln[:, 2]
+
+        print(b[b_stablepoints], p[p_stablepoints], r[r_stablepoints])
+
+
+        plt.figure()
+        plt.plot(b, self.dbdt_list, label='dbdt')
+        plt.plot(r, self.drdt_list, label='drdt')
+        plt.plot(p, self.dpdt_list, label='dpdt')
+        plt.xlabel('Concentration b,p,r')
+        plt.ylabel('dbdt, dpdt, drdt')
+        plt.legend()
         plt.show()
 
 
@@ -190,30 +273,42 @@ def fitness(ind):
 
 def generateES(ind_cls, strg_cls, size):
 
-    ind = ind_cls(random.gauss(0, 10) for _ in range(size))
-    ind.strategy = strg_cls(random.gauss(0,10) for _ in range(size))
+    ind = ind_cls(abs(random.gauss(0, 10)) for _ in range(size))
+    ind.strategy = strg_cls(abs(random.gauss(0,10)) for _ in range(size))
     return ind
 
 
 # this needs to be before the if __name__ blabla to make the multiprocessing work
 affymetrix_df = pd.read_csv('affymetrix_data.csv')
 
+# # replaces df by average of all rows per sample
+# affymetrix_df = affymetrix_df.groupby('Sample').agg({'PRDM1':'mean','BCL6':'mean','IRF4':'mean'})
+
+
 creator.create("Strategy", np.ndarray)
 creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
 creator.create("Individual", np.ndarray, fitness=creator.FitnessMin)
 
 toolbox = base.Toolbox()
-IND_SIZE = 6
+IND_SIZE = 2
 toolbox.register("evaluate", fitness)
 toolbox.register("individual", generateES, creator.Individual, creator.Strategy,
     IND_SIZE)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 toolbox.register("mate", tools.cxESBlend, alpha=0.1)
-toolbox.register("mutate", tools.mutESLogNormal, c=1.0, indpb=0.3)
-toolbox.register("select", tools.selTournament, tournsize=5)
+toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=5, indpb=0.8)
+toolbox.register("select", tools.selTournament, tournsize=10)
 
 if __name__ == '__main__':
+    # show what the best solution looks like
+    # best_sol = CD40SubNetwork(*hof[0])
+    # t_start = 0
+    # t_end = 100
+    # t_step = 0.01
+    # soln, t_list = best_sol.time_evolution(t_start, t_end, t_step)
+    # best_sol.plot_evolution()
+
 
     # plot figure showing the affymetrix data as if it is a time series
     ax = plt.gca()
@@ -246,15 +341,19 @@ if __name__ == '__main__':
 
     hof.clear()
 
-    pop = toolbox.population(n=30)
+    pop = toolbox.population(n=25)
 
-    pop, logbook = algorithms.eaMuCommaLambda(pop, toolbox, mu=19, lambda_=50, cxpb=0.6, mutpb=0.4,
-                                              ngen=50, stats=stats, halloffame=hof, verbose=True)
+    pop, logbook = algorithms.eaMuPlusLambda(pop, toolbox, mu=25, lambda_=150, cxpb=0.5, mutpb=0.5,
+                                              ngen=10, stats=stats, halloffame=hof, verbose=True)
+
 
     # show what the best solution looks like
     best_sol = CD40SubNetwork(*hof[0])
+    print("This is mu_R: ", best_sol.mu_r)
+    print("This is sigma_r: ", best_sol.sigma_r)
     t_start = 0
     t_end = 100
     t_step = 0.01
     soln, t_list = best_sol.time_evolution(t_start, t_end, t_step)
     best_sol.plot_evolution()
+    best_sol.calc_stablepoints()
