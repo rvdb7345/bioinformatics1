@@ -83,17 +83,17 @@ class IRF4(object):
 
     def calc_zeropoints(self):
         self.intersections = root(self.equation, [0., 10])
-
         return sorted(self.intersections.x)
 
-    def plot(self):
+    def plot(self, name='test'):
         r_list = np.arange(0, 5, 0.001)
         drdt = self.equation(r_list)
 
         intersections = self.intersections.x
         plt.figure()
-        plt.title("With intersections: {}".format(intersections))
+        plt.title("{}: With intersections: {}".format(name, intersections))
         plt.plot(r_list, drdt)
+        plt.scatter(intersections, [0,0])
         plt.show()
 
 def fitness(ind):
@@ -175,21 +175,21 @@ if __name__ == '__main__':
 
     hof = tools.HallOfFame(1, similar=np.array_equal)
 
-    hof.clear()
+    # hof.clear()
 
     pop = toolbox.population(n=10000)
 
     pop, logbook = algorithms.eaMuPlusLambda(pop, toolbox, mu=10000, lambda_=5000, cxpb=0.1, mutpb=0.90,
-                                              ngen=100, stats=stats, halloffame=hof, verbose=True)
+                                              ngen=40, stats=stats, halloffame=hof, verbose=True)
 
 
     # show what the best solution looks like
     best_sol = IRF4(*hof[0])
-    print('Beta en p van ons {}, {}'.format(best_sol.beta, best_sol.p))
-    print("Locatie van de bijbehorende snijpunten: ", best_sol.calc_zeropoints())
-    print('Fitness van onze solution: ', fitness(hof[0])[0])
+    print('Beta and p of our solution {}, {}'.format(best_sol.beta, best_sol.p))
+    print("Location of the roots: ", best_sol.calc_zeropoints())
+    print('Fitness of our best solution: ', fitness(hof[0])[0])
 
-    best_sol.plot()
+    best_sol.plot('ours')
 
     mu_r = 0.1
     sigma_r = 2.6
@@ -200,8 +200,8 @@ if __name__ == '__main__':
     p = -sigma_r/(lambda_r*k_r) + beta
     sol_of_martinez = IRF4(beta, p)
 
-    print('Beta en p van martinez {}, {}'.format(beta, p))
-    print("Locatie van de bijbehorende snijpunten: ", sol_of_martinez.calc_zeropoints())
+    print('Beta and p of martinez {}, {}'.format(beta, p))
+    print("Location of the roots: ", sol_of_martinez.calc_zeropoints())
     print("The fitness of the martinez solution: ", fitness([beta, p])[0])
 
-    sol_of_martinez.plot()
+    sol_of_martinez.plot('martinez')
