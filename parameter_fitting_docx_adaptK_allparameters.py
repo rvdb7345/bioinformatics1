@@ -7,6 +7,7 @@ from deap import algorithms
 from deap import base
 from deap import creator
 from deap import tools
+from deap import cma
 from scipy.optimize import fsolve, root
 import random
 import math
@@ -70,16 +71,23 @@ class ForwardEuler(object):
 class IRF4(object):
     """ A class containing the parameters, equations and necessary functions for the standard Martinez model """
 
-    def __init__(self, beta, p):
-        self.beta = beta
-        self.p = p
+    def __init__(self, mu_r, CD40, sigma_r, lambda_r, k_r):
+        # self.beta = beta
+        # self.p = p
+
+        self.mu_r = mu_r
+        self.CD40 = CD40
+        self.sigma_r = sigma_r
+        self.lambda_r = lambda_r
+        self.k_r = k_r
 
     def equation(self, y):
-        # drdt = self.mu_r + self.sigma_r * r ** 2 / (self.k_r ** 2 + r ** 2) + CD40 - self.lambda_r * r
+        drdt = self.mu_r + self.sigma_r * y*self.k_r ** 2 / (self.k_r ** 2 + y*self.k_r ** 2) + self.CD40 - \
+               self.lambda_r * y*self.k_r
 
-        F = y**3 - self.beta * y**2 + y - self.p
+        # F = y**3 - self.beta * y**2 + y - self.p
 
-        return F
+        return drdt
 
     def calc_zeropoints(self):
         self.intersections = root(self.equation, [0., 0.1, 10], method='lm')
@@ -100,8 +108,8 @@ class IRF4(object):
         plt.scatter(inter1_data, np.zeros(len(inter1_data)))
         plt.scatter(inter2_data, np.zeros(len(inter2_data)))
         plt.axhline(y=0, color='grey', linestyle='--')
-        plt.ylim(min(drdt), 3)
-        plt.xlim(0,8)
+        # plt.ylim(min(drdt), 3)
+        # plt.xlim(0,8)
         fig.savefig("AffymetrixData{}.png".format(name.capitalize()))
         plt.close(fig)
 
@@ -116,17 +124,21 @@ def fitness(ind):
     intersections = model_ind.calc_zeropoints()
     delta_intersec = abs(intersections[2] - intersections[0])
 
+    # mu_r, CD40, sigma_r, lambda_r, k_r
+
+    beta = (ind[0] + ind[1] + ind[2]) / (ind[3] * ind[4])
+    p = - ind[2] / (ind[3] * ind[4]) + beta
+
     # instantiate an individual
-    if (ind[0] ** 2 > 3) and (ind[0] ** 3 + (ind[0] ** 2 - 3) ** (3/2) - 9 * ind[0] / 2 > - 27/2 * ind[1]) and \
-            (ind[0] ** 3 - (ind[0] ** 2 - 3) ** (3 / 2) - 9 * ind[0] / 2 < - 27/2 * ind[1]) and \
-            (intersections[2] - intersections[0] > 0.2):
+    if (beta ** 2 > 3) and (beta ** 3 + (beta ** 2 - 3) ** (3/2) - 9 * beta / 2 > - 27/2 * p) and \
+            (beta ** 3 - (beta ** 2 - 3) ** (3 / 2) - 9 * beta / 2 < - 27/2 * p) and \
+            (intersections[2] - intersections[0] > 0.1):
 
         # return abs(sum(intersections[0] - inter1_data)) + abs(sum(intersections[2] - inter2_data)),
         # print(np.linalg.norm(np.full((1, len(inter1_data)), intersections[0])))
 
         a = np.empty(len(inter1_data))
         a.fill(intersections[0])
-
 
         b = np.empty(len(inter2_data))
         b.fill(intersections[2])
@@ -141,8 +153,9 @@ def fitness(ind):
         return 10000000,
 
 def generateES(ind_cls, strg_cls, size):
-    ind = ind_cls(abs(random.gauss(0, 2)) for _ in range(size))
-    ind.strategy = strg_cls(abs(random.gauss(0, 3)) for _ in range(size))
+    ind = ind_cls([abs(np.random.normal(0.1, 0.05)), abs(np.random.normal(0.00001, 0.000006)), abs(np.random.normal(
+        2.6,1)), abs(np.random.normal(1.0, 0.4)), abs(np.random.normal(1.0, 0.4))])
+    ind.strategy = strg_cls(random.gauss(0, 0.5) for _ in range(size))
     return ind
 
 def mutate(ind, mu, sigma, indpb, c=1):
@@ -158,7 +171,36 @@ def mutate(ind, mu, sigma, indpb, c=1):
             ind[indx] += ind.strategy[indx] * random.gauss(0, 1)
             ind[indx] = abs(ind[indx])
 
+    if not all([x > 0 for x in ind]):
+        print(ind)
+
     return ind,
+
+def cxESBlend(ind1, ind2, alpha):
+    """Executes a blend crossover on both, the individual and the strategy. The
+    individuals shall be a :term:`sequence` and must have a :term:`sequence`
+    :attr:`strategy` attribute. Adjustment of the minimal strategy shall be done
+    after the call to this function, consider using a decorator.
+    :param ind1: The first evolution strategy participating in the crossover.
+    :param ind2: The second evolution strategy participating in the crossover.
+    :param alpha: Extent of the interval in which the new values can be drawn
+                  for each attribute on both side of the parents' attributes.
+    :returns: A tuple of two evolution strategies.
+    This function uses the :func:`~random.random` function from the python base
+    :mod:`random` module.
+    """
+    for i, (x1, s1, x2, s2) in enumerate(zip(ind1, ind1.strategy,
+                                             ind2, ind2.strategy)):
+        # Blend the values
+        gamma = (1. + 2. * alpha) * random.random() - alpha
+        ind1[i] = abs((1. - gamma) * x1 + gamma * x2)
+        ind2[i] = abs(gamma * x1 + (1. - gamma) * x2)
+        # Blend the strategies
+        gamma = (1. + 2. * alpha) * random.random() - alpha
+        ind1.strategy[i] = (1. - gamma) * s1 + gamma * s2
+        ind2.strategy[i] = gamma * s1 + (1. - gamma) * s2
+
+    return ind1, ind2
 
 
 # this needs to be before the if __name__ blabla to make the multiprocessing work
@@ -176,13 +218,13 @@ creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
 creator.create("Individual", np.ndarray, fitness=creator.FitnessMin)
 
 toolbox = base.Toolbox()
-IND_SIZE = 2
+IND_SIZE = 5
 toolbox.register("evaluate", fitness)
 toolbox.register("individual", generateES, creator.Individual, creator.Strategy,
     IND_SIZE)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-toolbox.register("mate", tools.cxESBlend, alpha=0.1)
+toolbox.register("mate", cxESBlend, alpha=0.1)
 toolbox.register("mutate", mutate, mu=0, sigma=1, indpb=1)
 toolbox.register("select", tools.selTournament, tournsize=7)
 
@@ -198,38 +240,51 @@ if __name__ == '__main__':
 
     hof = tools.HallOfFame(1, similar=np.array_equal)
 
-    # hof.clear()
+    hof.clear()
 
-    pop = toolbox.population(n=10000)
+    pop = toolbox.population(n=100000)
 
-    pop, logbook = algorithms.eaMuPlusLambda(pop, toolbox, mu=10000, lambda_=5000, cxpb=0.1, mutpb=0.90,
-                                              ngen=50, stats=stats, halloffame=hof, verbose=True)
+    pop, logbook = algorithms.eaMuPlusLambda(pop, toolbox, mu=100000, lambda_=50000, cxpb=0.1, mutpb=0.90,
+                                              ngen=3, stats=stats, halloffame=hof, verbose=True)
 
     print('The ultimate roots would be: ', np.mean(inter1_data), np.mean(inter2_data))
 
     # show what the best solution looks like
+    # print(hof)
     best_sol = IRF4(*hof[0])
-    print('Beta and p of our solution: {}, {}'.format(best_sol.beta, best_sol.p))
-    sigma_r = best_sol.beta - best_sol.p
-    mu_r = best_sol.beta - sigma_r
-    print('sigma_r and mu_r of our solution: {}, {}'.format(sigma_r, mu_r))
+    # mu_r, CD40, sigma_r, lambda_r, k_r
+
+    print("The parameters of our best fit are:\n mu_r: {}, k_r: {}, sigma_r: {}, CD40: {}, lambda_r: {} ".format(
+          best_sol.mu_r, best_sol.k_r, best_sol.sigma_r, best_sol.CD40, best_sol.lambda_r))
+    # print('Beta and p of our solution: {}, {}'.format(best_sol.beta, best_sol.p))
+    # sigma_r = best_sol.beta - best_sol.p
+    # mu_r = best_sol.beta - sigma_r
+    # print('sigma_r and mu_r of our solution: {}, {}'.format(sigma_r, mu_r))
     print("Location of the roots: ", best_sol.calc_zeropoints())
     print('Fitness of our best solution: ', fitness(hof[0])[0])
 
     best_sol.plot('ours')
 
-    mu_r = 0.1
-    sigma_r = 2.6
-    CD40 = 0
-    lambda_r = 1
-    k_r = 1
-    beta = mu_r + CD40 + sigma_r / (lambda_r * k_r)
-    p = -sigma_r/(lambda_r*k_r) + beta
-    sol_of_martinez = IRF4(beta, p)
+    # overal_best = IRF4(-0.09013576441252273, 8.783827150133703e-06, 0.17601592902632068, 0.0317307058645795, 0.3840437319981567)
+    # print("Location of the roots: ", overal_best.calc_zeropoints())
+    # print('Fitness of our best solution: ', fitness([-0.09013576441252273, 8.783827150133703e-06,
+    #                                                  0.17601592902632068, 0.0317307058645795, 0.3840437319981567])[0])
+    #
+    # overal_best.plot('ours')
 
-    print('Beta and p of martinez: {}, {}'.format(beta, p))
-    print('sigma_r and mu_r of martinez: {}, {}'.format(sigma_r, mu_r))
-    print("Location of the roots: ", sol_of_martinez.calc_zeropoints())
-    print("The fitness of the martinez solution: ", fitness([beta, p])[0])
-
-    sol_of_martinez.plot('martinez')
+    #
+    # mu_r = 0.1
+    # sigma_r = 2.6
+    # CD40 = 0
+    # lambda_r = 1
+    # k_r = 1
+    # beta = mu_r + CD40 + sigma_r / (lambda_r * k_r)
+    # p = -sigma_r/(lambda_r*k_r) + beta
+    # sol_of_martinez = IRF4(beta, p)
+    #
+    # print('Beta and p of martinez: {}, {}'.format(beta, p))
+    # print('sigma_r and mu_r of martinez: {}, {}'.format(sigma_r, mu_r))
+    # print("Location of the roots: ", sol_of_martinez.calc_zeropoints())
+    # print("The fitness of the martinez solution: ", fitness([beta, p])[0])
+    #
+    # sol_of_martinez.plot('martinez')

@@ -82,18 +82,20 @@ class IRF4(object):
         return F
 
     def calc_zeropoints(self):
-        self.intersections = root(self.equation, [0., 10])
+        self.intersections = root(self.equation, [0., 0., 10])
         return sorted(self.intersections.x)
 
     def plot(self, name='test'):
         r_list = np.arange(0, 5, 0.001)
         drdt = self.equation(r_list)
 
-        intersections = self.intersections.x
+        intersections = root(self.equation, [0., 0., 10]).x
         plt.figure()
         plt.title("{}: With intersections: {}".format(name, intersections))
         plt.plot(r_list, drdt)
-        plt.scatter(intersections, [0,0])
+        plt.scatter(intersections, np.zeros(len(intersections)))
+        plt.xlim(0,3)
+        plt.ylim(-2,1)
         plt.show()
 
 def fitness(ind):
@@ -105,7 +107,7 @@ def fitness(ind):
 
     model_ind = IRF4(*ind)
     intersections = model_ind.calc_zeropoints()
-    delta_intersec = abs(intersections[1] - intersections[0])
+    delta_intersec = abs(intersections[2] - intersections[0])
 
     # instantiate an individual
     if (ind[0] ** 2 > 3) and (ind[0] ** 3 + (ind[0] ** 2 - 3) ** (3/2) + 9 * ind[0] > 27/2 * ind[0] - ind[1]) and (
@@ -175,7 +177,7 @@ if __name__ == '__main__':
 
     hof = tools.HallOfFame(1, similar=np.array_equal)
 
-    # hof.clear()
+    hof.clear()
 
     pop = toolbox.population(n=10000)
 
@@ -183,8 +185,10 @@ if __name__ == '__main__':
                                               ngen=40, stats=stats, halloffame=hof, verbose=True)
 
 
+    print('this is hof: ', hof)
     # show what the best solution looks like
     best_sol = IRF4(*hof[0])
+    print(hof[0])
     print('Beta and p of our solution {}, {}'.format(best_sol.beta, best_sol.p))
     print("Location of the roots: ", best_sol.calc_zeropoints())
     print('Fitness of our best solution: ', fitness(hof[0])[0])
