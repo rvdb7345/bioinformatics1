@@ -279,7 +279,7 @@ def generateES(ind_cls, strg_cls, size):
 
 
 # this needs to be before the if __name__ blabla to make the multiprocessing work
-affymetrix_df = pd.read_csv('affymetrix_data.csv')
+affymetrix_df = pd.read_csv('wesenhagen_data.csv')
 
 # # replaces df by average of all rows per sample
 # affymetrix_df = affymetrix_df.groupby('Sample').agg({'PRDM1':'mean','BCL6':'mean','IRF4':'mean'})

@@ -148,14 +148,14 @@ def fitness(ind):
         #        abs(np.linalg.norm((b, inter2_data))),
         return abs(sum(intersections[0] - inter1_data)) + abs(sum(intersections[2] - inter2_data)),
 
-
     else:
         return 10000000,
 
 def generateES(ind_cls, strg_cls, size):
-    ind = ind_cls([abs(np.random.normal(0.1, 0.05)), abs(np.random.normal(0.00001, 0.000006)), abs(np.random.normal(
-        2.6,1)), abs(np.random.normal(1.0, 0.4)), abs(np.random.normal(1.0, 0.4))])
-    ind.strategy = strg_cls(random.gauss(0, 0.5) for _ in range(size))
+    # ind = ind_cls([abs(np.random.normal(5, 3)), abs(np.random.normal(5, 3)), abs(np.random.normal(5, 3)),
+    #                abs(np.random.normal(5, 3)), abs(np.random.normal(5, 3))])
+    ind = ind_cls(abs(random.gauss(0, 2)) for _ in range(size))
+    ind.strategy = strg_cls(abs(random.gauss(0, 5)) for _ in range(size))
     return ind
 
 def mutate(ind, mu, sigma, indpb, c=1):
@@ -170,9 +170,6 @@ def mutate(ind, mu, sigma, indpb, c=1):
             ind.strategy[indx] *= math.exp(t0_n + t * random.gauss(0, 1))
             ind[indx] += ind.strategy[indx] * random.gauss(0, 1)
             ind[indx] = abs(ind[indx])
-
-    if not all([x > 0 for x in ind]):
-        print(ind)
 
     return ind,
 
@@ -210,7 +207,9 @@ affymetrix_df = pd.read_csv('matrinez_data.csv')
 # # replaces df by average of all rows per sample
 # affymetrix_df = affymetrix_df.groupby('Sample').agg({'PRDM1':'mean','BCL6':'mean','IRF4':'mean'})
 affymetrix_df=affymetrix_df.set_index('Sample')
-inter1_data = np.append(affymetrix_df.loc['CB', 'IRF4'].values, affymetrix_df.loc['CC', 'IRF4'].values)
+# inter1_data = np.append(affymetrix_df.loc['CB', 'IRF4'].values, affymetrix_df.loc['CC', 'IRF4'].values)
+inter1_data = affymetrix_df.loc['CC', 'IRF4'].values
+
 inter2_data = affymetrix_df.loc['PC', 'IRF4'].values
 
 creator.create("Strategy", np.ndarray)
@@ -226,7 +225,7 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 toolbox.register("mate", cxESBlend, alpha=0.1)
 toolbox.register("mutate", mutate, mu=0, sigma=1, indpb=1)
-toolbox.register("select", tools.selTournament, tournsize=7)
+toolbox.register("select", tools.selTournament, tournsize=10)
 
 if __name__ == '__main__':
     pool = multiprocessing.Pool(multiprocessing.cpu_count())
@@ -244,8 +243,8 @@ if __name__ == '__main__':
 
     pop = toolbox.population(n=100000)
 
-    pop, logbook = algorithms.eaMuPlusLambda(pop, toolbox, mu=100000, lambda_=50000, cxpb=0.1, mutpb=0.90,
-                                              ngen=3, stats=stats, halloffame=hof, verbose=True)
+    pop, logbook = algorithms.eaMuPlusLambda(pop, toolbox, mu=100000, lambda_=50000, cxpb=0.5, mutpb=0.50,
+                                              ngen=20, stats=stats, halloffame=hof, verbose=True)
 
     print('The ultimate roots would be: ', np.mean(inter1_data), np.mean(inter2_data))
 

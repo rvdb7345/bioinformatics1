@@ -88,20 +88,24 @@ class IRF4(object):
     def plot(self, name='test'):
         intersections = self.intersections.x
         # intersections = np.sort(intersections)
-        r_list = np.arange(0, 5, 0.001)
+        r_list = np.arange(0, 10, 0.001)
         drdt = self.equation(r_list)
 
         # intersections = self.intersections.x
         fig = plt.figure()
         plt.title("{}: With intersections: {}".format(name, intersections))
         # plt.plot(r_list + intersections[1], drdt - drdt[0])
-        plt.plot(r_list, drdt)
+        plt.plot(r_list, drdt, label='fit')
         plt.scatter(intersections, [0,0,0])
-        plt.scatter(inter1_data, np.zeros(len(inter1_data)))
-        plt.scatter(inter2_data, np.zeros(len(inter2_data)))
+        plt.scatter(inter1_data, np.zeros(len(inter1_data)), label='CC')
+        plt.scatter(inter3_data, np.zeros(len(inter3_data)), label='CB')
+        plt.scatter(inter2_data, np.zeros(len(inter2_data)), label='PC')
         plt.axhline(y=0, color='grey', linestyle='--')
         plt.ylim(min(drdt), 3)
-        plt.xlim(0,8)
+        plt.xlim(0,5)
+        plt.xlabel('r', fontsize=14)
+        plt.ylabel('drdt', fontsize=14)
+        plt.legend(fontsize=14)
         fig.savefig("AffymetrixData{}.png".format(name.capitalize()))
         plt.close(fig)
 
@@ -168,7 +172,9 @@ affymetrix_df = pd.read_csv('matrinez_data.csv')
 # # replaces df by average of all rows per sample
 # affymetrix_df = affymetrix_df.groupby('Sample').agg({'PRDM1':'mean','BCL6':'mean','IRF4':'mean'})
 affymetrix_df=affymetrix_df.set_index('Sample')
-inter1_data = np.append(affymetrix_df.loc['CB', 'IRF4'].values, affymetrix_df.loc['CC', 'IRF4'].values)
+# inter1_data = np.append(affymetrix_df.loc['CB', 'IRF4'].values, affymetrix_df.loc['CC', 'IRF4'].values)
+inter1_data = affymetrix_df.loc['CC', 'IRF4'].values
+inter3_data = affymetrix_df.loc['CB', 'IRF4'].values
 inter2_data = affymetrix_df.loc['PC', 'IRF4'].values
 
 creator.create("Strategy", np.ndarray)
