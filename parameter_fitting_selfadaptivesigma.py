@@ -38,7 +38,7 @@ class IRF4(object):
     def plot(self, name='test'):
         intersections = self.intersections.x
         # intersections = np.sort(intersections)
-        r_list = np.arange(0, 10, 0.001)
+        r_list = np.arange(0, 13, 0.001)
         drdt = self.equation(r_list)
 
         # intersections = self.intersections.x
@@ -46,13 +46,13 @@ class IRF4(object):
         plt.title("{}: With intersections: {}".format(name, intersections))
         # plt.plot(r_list + intersections[1], drdt - drdt[0])
         plt.plot(r_list, drdt, label='fit')
-        plt.scatter(intersections, [0,0,0])
+        plt.scatter(intersections, [0,0,0], marker='x')
         plt.scatter(inter1_data, np.zeros(len(inter1_data)), label='CC')
         plt.scatter(inter3_data, np.zeros(len(inter3_data)), label='CB')
         plt.scatter(inter2_data, np.zeros(len(inter2_data)), label='PC')
         plt.axhline(y=0, color='grey', linestyle='--')
-        plt.ylim(min(drdt), 2)
-        plt.xlim(0,2)
+        plt.ylim(min(drdt), 20)
+        plt.xlim(0,13)
         plt.xlabel('r', fontsize=14)
         plt.ylabel('drdt', fontsize=14)
         plt.legend(fontsize=14)
@@ -115,10 +115,7 @@ def mutation(child):
 
 def crossover(population, fitnesses, k, best_sol):
     """
-    Performs hybrid crossover: uniform crossover and arithmetic crossover
-    The uniform crossover randomly divides weights of 0 and 1 to the weights
-    of the neurons. This is done for n-1 weights. The last one is drawn from
-    a unifrom distribution. The weights are reversed for the second child.
+    Performs uniform crossover with tournament selection
     """
     nr_children = int(len(population) * frac_to_replace)
     # print("The number of childern that will be replaced", nr_children)
@@ -198,16 +195,16 @@ def initializer():
     global tau
     global mutation_chance
     # this needs to be before the if __name__ blabla to make the multiprocessing work
-    affymetrix_df = pd.read_csv('matrinez_data.csv')
-    # affymetrix_df = pd.read_csv('wesenhagen_data.csv')
+    # affymetrix_df = pd.read_csv('matrinez_data.csv')
+    affymetrix_df = pd.read_csv('wesenhagen_data.csv')
 
     # # replaces df by average of all rows per sample
     # affymetrix_df = affymetrix_df.groupby('Sample').agg({'PRDM1':'mean','BCL6':'mean','IRF4':'mean'})
     affymetrix_df = affymetrix_df.set_index('Sample')
-    inter1_data = np.append(affymetrix_df.loc['CB', 'IRF4'].values, affymetrix_df.loc['CC', 'IRF4'].values)/4
+    inter1_data = np.append(affymetrix_df.loc['CB', 'IRF4'].values, affymetrix_df.loc['CC', 'IRF4'].values)
     # inter1_data = affymetrix_df.loc['CC', 'IRF4'].values / 4
     # inter3_data = affymetrix_df.loc['CB', 'IRF4'].values / 4
-    inter2_data = affymetrix_df.loc['PC', 'IRF4'].values / 4
+    inter2_data = affymetrix_df.loc['PC', 'IRF4'].values
 
     mutation_chance = 0.25
     tau = 0.90
@@ -273,23 +270,46 @@ if __name__ == '__main__':
     tournament_size = 20
     len_ind = number_of_variables_to_fit * 2  # times two for the sigmas
     pop_size = 1000
-    num_gen = 30
+    num_gen = 100
 
     best_fitness, best_ind = run_evolutionary_algo(pop_size, number_of_variables_to_fit, num_gen, tournament_size)
-
-    print("our best individual has a fitness of: ", best_fitness)
-    print('With the following genetic material: ', best_ind)
-
-    affymetrix_df = pd.read_csv('matrinez_data.csv')  # change this in the initializer as well
-    # affymetrix_df = affymetrix_df.groupby('Sample').agg({'PRDM1':'mean','BCL6':'mean','IRF4':'mean'})
+    # #
+    # # print("our best individual has a fitness of: ", best_fitness)
+    # # print('With the following genetic material: ', best_ind)
+    # #
+    # affymetrix_df = pd.read_csv('matrinez_data.csv')  # change this in the initializer as well
+    affymetrix_df = pd.read_csv('wesenhagen_data.csv')
+    #
+    # # # affymetrix_df = affymetrix_df.groupby('Sample').agg({'PRDM1':'mean','BCL6':'mean','IRF4':'mean'})
     affymetrix_df = affymetrix_df.set_index('Sample')
-    # inter1_data = np.append(affymetrix_df.loc['CB', 'IRF4'].values, affymetrix_df.loc['CC', 'IRF4'].values)
-    inter1_data = affymetrix_df.loc['CC', 'IRF4'].values / 4
-    inter3_data = affymetrix_df.loc['CB', 'IRF4'].values / 4
-    inter2_data = affymetrix_df.loc['PC', 'IRF4'].values / 4
-
+    inter1_data = np.append(affymetrix_df.loc['CB', 'IRF4'].values, affymetrix_df.loc['CC', 'IRF4'].values)
+    # # inter1_data = affymetrix_df.loc['CC', 'IRF4'].values / 4
+    inter3_data = affymetrix_df.loc['CB', 'IRF4'].values
+    inter2_data = affymetrix_df.loc['PC', 'IRF4'].values
+    #
     best_solution = IRF4(*best_ind[:number_of_variables_to_fit])
+    print('beta, p: ', best_solution.beta, best_solution.p)
     print("De snijpunten met de x-as: ", best_solution.calc_zeropoints())
+    print("The fitness of our solution: ", fitness([best_solution.beta, best_solution.p, 0, 0]))
+
     best_solution.plot('Ours')
+
+    mu_r = 0.1
+    sigma_r = 2.6
+    CD40 = 0
+    lambda_r = 1
+    k_r = 1
+    beta = mu_r + CD40 + sigma_r / (lambda_r * k_r)
+    p = -sigma_r / (lambda_r * k_r) + beta
+    # beta = 12.76144062324778
+    # p = 0.004582577456956276
+    sol_of_martinez = IRF4(beta, p)
+
+    print('Beta and p of martinez: {}, {}'.format(beta, p))
+    print('sigma_r and mu_r of martinez: {}, {}'.format(sigma_r, mu_r))
+    print("Location of the roots: ", sol_of_martinez.calc_zeropoints())
+    print("The fitness of the martinez solution: ", fitness([beta, p, 0, 0]))
+
+    sol_of_martinez.plot('Martinez')
 
 
