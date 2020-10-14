@@ -423,7 +423,7 @@ if __name__ == '__main__':
     tournament_size = 20
     len_ind = number_of_variables_to_fit * 2  # times two for the sigmas
     pop_size = 100000
-    num_gen = 10
+    num_gen = 1
 
     # affymetrix_df = pd.read_csv('matrinez_data.csv')  # change this in the initializer as well
     affymetrix_df = pd.read_csv('wesenhagen_data.csv')
@@ -468,17 +468,22 @@ if __name__ == '__main__':
 
     mu_r = 0.1
     sigma_r = 2.6
-    CD40 = 0
+    CD40 = 0.00001
     lambda_r = 1
     k_r = 1
     beta = mu_r + CD40 + sigma_r / (lambda_r * k_r)
     p = -sigma_r / (lambda_r * k_r) + beta
     # beta = 12.76144062324778
     # p = 0.004582577456956276
-    sol_of_martinez = IRF4(mu_r, CD40, sigma_r, lambda_r, k_r)
+    mu_b =2
+    sigma_b = 100
+    mu_p = 10**(-6)
+    sigma_p = 9
+    sol_of_martinez = full_model(CD40, mu_r, sigma_r, mu_b, sigma_b, mu_p, sigma_p)
 
     print('Martinez: mu: {}, sigma: {}, k: {}, lambda: {}, CD40: {} '.format(mu_r, CD40, sigma_r, lambda_r, k_r))
     print("Location of the roots: ", sol_of_martinez.calc_zeropoints())
-    print("The fitness of the martinez solution: ", fitness([mu_r, CD40, sigma_r, lambda_r, k_r, 0, 0, 0, 0, 0]))
+    print("The fitness of the martinez solution: ", fitness([CD40, mu_r, sigma_r, mu_b, sigma_b, mu_p, sigma_p, 0,0, 0,
+                                                             0, 0, 0, 0]))
 
     sol_of_martinez.plot('Martinez')
