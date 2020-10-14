@@ -69,7 +69,7 @@ class full_model(object):
 
     def equation_blimp_PC(self, p):
         dpdt = self.mu_p + (self.sigma_p * self.k_b ** 2) / (self.k_b ** 2 + np.mean(inter2_data_BCL) ** 2) + \
-               (self.sigma_p * np.mean(inter1_data_IRF) ** 2) / (self.k_r ** 2 + np.mean(inter2_data_IRF) ** 2) - self.l_p * p
+               (self.sigma_p * np.mean(inter2_data_IRF) ** 2) / (self.k_r ** 2 + np.mean(inter2_data_IRF) ** 2) - self.l_p * p
 
         return dpdt
 
@@ -183,7 +183,7 @@ def fitness(ind):
         #        abs(np.linalg.norm((b, inter2_data))),
         return abs(sum(intersections[0][0] - inter1_data_IRF)) / len(inter1_data_IRF) + \
                abs(sum(intersections[0][2] - inter2_data_IRF)) / len(inter2_data_IRF) + \
-                abs(sum(intersections[1][1] - inter1_data_BCL)) / len(inter1_data_BCL) + \
+               abs(sum(intersections[1][1] - inter1_data_BCL)) / len(inter1_data_BCL) + \
                abs(sum(intersections[1][0] - inter2_data_BCL)) / len(inter2_data_BCL) + \
                abs(sum(intersections[2][0] - inter1_data_BLIMP)) / len(inter1_data_BLIMP) + \
                abs(sum(intersections[2][1] - inter2_data_BLIMP)) / len(inter2_data_BLIMP)
@@ -423,7 +423,7 @@ if __name__ == '__main__':
     tournament_size = 20
     len_ind = number_of_variables_to_fit * 2  # times two for the sigmas
     pop_size = 100000
-    num_gen = 40
+    num_gen = 10
 
     # affymetrix_df = pd.read_csv('matrinez_data.csv')  # change this in the initializer as well
     affymetrix_df = pd.read_csv('wesenhagen_data.csv')
