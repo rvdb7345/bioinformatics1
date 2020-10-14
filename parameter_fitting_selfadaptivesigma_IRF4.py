@@ -29,7 +29,7 @@ class IRF4(object):
     def equation(self, y):
         # drdt = self.mu_r + self.sigma_r * r ** 2 / (self.k_r ** 2 + r ** 2) + CD40 - self.lambda_r * r
 
-        F = y**3 - self.beta * y**2 + y - self.p
+        F = (y**3 - self.beta * y**2 + y - self.p) * 10**(-8) / 4
 
         return F
 
@@ -263,7 +263,7 @@ def run_evolutionary_algo(pop_size, num_variables, num_gen, tournament_size, int
 
 
     results = pd.DataFrame(data=np.array([betas_list, p_list, fitness_list]).T, columns=['beta', 'p', 'fitness'])
-    results.to_csv('IRF4_fitting_individuals.csv')
+    results.to_csv('IRF4_fitting_individuals_betap.csv')
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -292,7 +292,7 @@ if __name__ == '__main__':
     tournament_size = 20
     len_ind = number_of_variables_to_fit * 2  # times two for the sigmas
     pop_size = 50000
-    num_gen = 2
+    num_gen = 100
 
 
     # #

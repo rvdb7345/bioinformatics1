@@ -25,7 +25,7 @@ def make_gif_from_frames():
         images.append(imageio.imread(path.join(dir_path, 'figures/gif/{}.png'.format(filename))))
     imageio.mimsave(fp_out, images, fps=30)
 
-results = pd.read_csv('IRF4_fitting_individuals_gen50_size50000.csv')
+results = pd.read_csv('IRF4_fitting_individuals_gen50_size50000_bp.csv')
 results = results.iloc[0:10000]
 best_result = results.iloc[results['fitness'].idxmin()]
 # results = results.loc[results['fitness']<20]

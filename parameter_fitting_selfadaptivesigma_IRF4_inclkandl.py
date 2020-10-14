@@ -32,15 +32,15 @@ class IRF4(object):
         self.lambda_r = lambda_r
         self.k_r = k_r
 
+
     def equation(self, r):
         drdt = (self.mu_r + self.sigma_r * r ** 2 / (self.k_r ** 2 + r ** 2) + self.CD40 - \
-               self.lambda_r * r) * 10**(-8) / 4
+               self.lambda_r * r)
 
         return drdt
 
-
     def calc_zeropoints(self):
-        self.intersections = root(self.equation, [0., 6, 200], method='lm')
+        self.intersections = root(self.equation, [0., 8, 200], method='lm')
         return np.sort(self.intersections.x)
 
     def plot(self, name='test'):
@@ -59,8 +59,8 @@ class IRF4(object):
         plt.scatter(inter3_data, np.zeros(len(inter3_data)), label='CB')
         plt.scatter(inter2_data, np.zeros(len(inter2_data)), label='PC')
         plt.axhline(y=0, color='grey', linestyle='--')
-        plt.ylim(-0.10*10**-8, 0.08*10**(-8))
-        plt.xlim(0, 12)
+        plt.ylim(-0.05*10**-8, 0.09*10**(-8))
+        plt.xlim(3, 12)
         plt.xlabel('r', fontsize=14)
         plt.ylabel('drdt', fontsize=14)
         plt.legend(fontsize=14)
@@ -87,7 +87,7 @@ def fitness(ind):
     if (beta ** 2 > 3) and (beta ** 3 + (beta ** 2 - 3) ** (3/2) - 9 * beta / 2 > - 27/2 * p) and \
             (beta ** 3 - (beta ** 2 - 3) ** (3 / 2) - 9 * beta / 2 < - 27/2 * p) and (beta > 0) and (p > 0) and \
             (abs(intersections[2] - intersections[0]) > 0.2) and (abs(intersections[2] - intersections[1]) > 3) and \
-            (ind[0] > 0) and (ind[1] > 0) and (ind[2] > 0) and (ind[3] > 0)  and (ind[4] > 0):
+            (ind[0] > 0) and (ind[1] > 0) and (ind[2] > 0) and (ind[3] > 0) and (ind[4] > 0):
 
         # return abs(sum(intersections[0] - inter1_data)) + abs(sum(intersections[2] - inter2_data)),
         # print(np.linalg.norm(np.full((1, len(inter1_data)), intersections[0])))
@@ -283,7 +283,7 @@ def run_evolutionary_algo(pop_size, num_variables, num_gen, tournament_size, int
 
     results = pd.DataFrame(data=np.array([sigma_list, mu_list, lambda_list, k_list, fitness_list]).T,
                            columns=['sigma', 'mu', 'lambda', 'k_list', 'fitness'])
-    results.to_csv('IRF4_fitting_individuals_inclkandl.csv')
+    results.to_csv('IRF4_fitting_individuals_inclkandl_noscaling.csv')
 
     # fig = plt.figure()
     # ax = fig.add_subplot(111, projection='3d')
@@ -312,8 +312,7 @@ if __name__ == '__main__':
     tournament_size = 20
     len_ind = number_of_variables_to_fit * 2  # times two for the sigmas
     pop_size = 100000
-    num_gen = 100
-
+    num_gen = 10
 
     # affymetrix_df = pd.read_csv('matrinez_data.csv')  # change this in the initializer as well
     affymetrix_df = pd.read_csv('wesenhagen_data.csv')
@@ -325,14 +324,15 @@ if __name__ == '__main__':
     inter1_data = np.append(affymetrix_df.loc['CB', 'IRF4'].values, affymetrix_df.loc['CC', 'IRF4'].values)
     inter2_data = affymetrix_df.loc['PC', 'IRF4'].values
     inter3_data = affymetrix_df.loc['CB', 'IRF4'].values
-    #
-    # best_fitness, best_ind = run_evolutionary_algo(pop_size, number_of_variables_to_fit, num_gen, tournament_size,
-    #                                                inter1_data, inter2_data, inter3_data)
 
+    best_fitness, best_ind = run_evolutionary_algo(pop_size, number_of_variables_to_fit, num_gen, tournament_size,
+                                                   inter1_data, inter2_data, inter3_data)
 
-    # best_solution = IRF4(*best_ind[:number_of_variables_to_fit])
-    best_solution = IRF4(44.79468359480931, 0.019429126981462406, 379.3261182727924, 18.074241602831844,
-                         13.393362794894285)
+    # def __init__(self, mu_r, CD40, sigma_r, lambda_r, k_r):
+
+    best_solution = IRF4(*best_ind[:number_of_variables_to_fit])
+    # best_solution = IRF4(24.024979315717964, 0.05407750794340739, 204.30287870879206, 10.45117254171176,
+    #                      12.432905080247275)
 
     print('mu: {}, sigma: {}, k: {}, lambda: {}, CD40: {} '.format(best_solution.mu_r, best_solution.sigma_r,
                                                                    best_solution.k_r, best_solution.lambda_r,
