@@ -4,6 +4,7 @@ from scipy.integrate import odeint, solve_ivp
 import matplotlib.pyplot as plt
 from numba import jit
 import tqdm
+from scipy.stats import norm
 
 class ForwardEuler(object):
     """
@@ -66,8 +67,8 @@ class MartinezModel(object):
 
 
     def __init__(self, mu_p, sigma_p, k_p, lambda_p, mu_b, sigma_b, k_b,
-                 lambda_b, mu_r, sigma_r, k_r, lambda_r, b0, p0, r0, cd0_signal, bcr0_signal, t_BCR_begin,
-                 t_BCR_end, t_cd40_begin, t_cd40_end):
+                 lambda_b, mu_r, sigma_r, k_r, lambda_r, b0, p0, r0, cd0_signal, 
+                 bcr0_signal, t_BCR_mean, t_BCR_std, t_cd40_mean, t_cd40_std):
 
         self.mu_p = mu_p
         self.mu_b = mu_b
@@ -92,11 +93,11 @@ class MartinezModel(object):
         self.cd0_signal = cd0_signal
         self.bcr0_signal = bcr0_signal
 
-        self.t_BCR_begin = t_BCR_begin
-        self.t_BCR_end = t_BCR_end
+        self.t_BCR_mean = t_BCR_mean
+        self.t_BCR_std = t_BCR_std
 
-        self.t_cd40_begin = t_cd40_begin
-        self.t_cd40_end = t_cd40_end
+        self.t_cd40_mean = t_cd40_mean
+        self.t_cd40_std = t_cd40_std
 
     def calc_beta(self):
         self.beta = (self.mu_r + self.cd0_signal + self.sigma_r) / (self.lambda_r * self.k_r)
@@ -104,12 +105,18 @@ class MartinezModel(object):
     def equations(self, y, t, k):
         b, p, r = y
 
-        bcr0 = 0
-        cd0 = 0
-        if self.t_BCR_end >= t >= self.t_BCR_begin:
-            bcr0 = self.bcr0_signal
-        elif self.t_cd40_end >= t >= self.t_cd40_begin:
-            cd0 = self.cd0_signal
+        # bcr0 = 0
+        # cd0 = 0
+        # elif self.t_cd40_end >= t >= self.t_cd40_begin:
+        #     cd0 = self.cd0_signal
+
+        bcr0 = self.bcr0_signal * norm.pdf(t, self.t_BCR_mean, self.t_BCR_std)
+        cd0 = self.cd0_signal * norm.pdf(t, self.t_cd40_mean, self.t_cd40_std)
+
+        if t == self.t_BCR_mean:
+            print("bcr0 at peak = ", bcr0)
+        if t == self.t_cd40_mean:
+            print("cd0  at peak = ", cd0)
 
         BCR = bcr0 * self.k_b ** 2 / (self.k_b ** 2 + b ** 2)
         CD40 = cd0 * self.k_b ** 2 / (self.k_b ** 2 + b ** 2)
@@ -161,12 +168,12 @@ class MartinezModel(object):
         fig.savefig("TimeEvolutionModel.png")
         plt.close(fig)
 
-        fig = plt.figure()
+        fig = plt.figure(figsize=(10,3))
         plt.plot(self.t_list, self.BCR_list, label='BCR', color='orange')
         plt.plot(self.t_list, self.CD40_list, label='CD40', color='blue')
         plt.ylabel('Concentration ($10^{-8}$ M)')
         plt.xlabel('Time (4h)')
-        plt.xlim(3.8, 5.2)
+        plt.xlim(self.t_BCR_mean - 3 * self.t_BCR_std, self.t_cd40_mean + 3 * self.t_cd40_std)
         plt.legend()
         plt.grid()
         plt.title('Concentration over time')
@@ -395,23 +402,25 @@ if __name__ == '__main__':
     b0 = 10
     p0 = 0
     r0 = 0
-    cd0_signal = 1
-    bcr0_signal = 5
 
     t_start = 0
     t_end = 200
     t_step = 0.01
 
-    t_BCR_begin = 40
-    t_BCR_end = 41
+    # Gaussian bcr0 and cd0 signal settings
+    bcr0_signal = 45 # check (in output) if bcr0 at peak <10
+    cd0_signal = 8 # check (in output) if cd0 at peak <1
 
-    t_cd40_begin = 50
-    t_cd40_end = 60
+    t_BCR_mean = 40
+    t_BCR_std = 7
+
+    t_cd40_mean = 60
+    t_cd40_std = 5
 
 
     MartinezModel = MartinezModel(mu_p, sigma_p, k_p, lambda_p, mu_b, sigma_b, k_b,
                           lambda_b, mu_r, sigma_r, k_r, lambda_r, b0, p0, r0, cd0_signal, 
-                          bcr0_signal, t_BCR_begin, t_BCR_end, t_cd40_begin, t_cd40_end)
+                          bcr0_signal, t_BCR_mean, t_BCR_std, t_cd40_mean, t_cd40_std)
 
     MartinezModel.time_evolution(t_start, t_end, t_step)
     MartinezModel.plot_evolution()
