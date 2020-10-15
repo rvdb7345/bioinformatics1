@@ -29,7 +29,7 @@ class IRF4(object):
     def equation(self, y):
         # drdt = self.mu_r + self.sigma_r * r ** 2 / (self.k_r ** 2 + r ** 2) + CD40 - self.lambda_r * r
 
-        F = (y**3 - self.beta * y**2 + y - self.p) * 10**(-8) / 4
+        F = (y**3 - self.beta * y**2 + y - self.p)
 
         return F
 
@@ -53,7 +53,7 @@ class IRF4(object):
         plt.scatter(inter3_data, np.zeros(len(inter3_data)), label='CB')
         plt.scatter(inter2_data, np.zeros(len(inter2_data)), label='PC')
         plt.axhline(y=0, color='grey', linestyle='--')
-        plt.ylim(min(drdt), 20)
+        plt.ylim(min(drdt), 5)
         plt.xlim(0,13)
         plt.xlabel('r', fontsize=14)
         plt.ylabel('drdt', fontsize=14)
@@ -291,8 +291,8 @@ if __name__ == '__main__':
     number_of_variables_to_fit = 2
     tournament_size = 20
     len_ind = number_of_variables_to_fit * 2  # times two for the sigmas
-    pop_size = 50000
-    num_gen = 100
+    pop_size = 100000
+    num_gen = 20
 
 
     # #
@@ -314,6 +314,8 @@ if __name__ == '__main__':
 
     #
     best_solution = IRF4(*best_ind[:number_of_variables_to_fit])
+    # best_solution = IRF4(9.813971426023775, 0.025607569275613286)
+
     print('beta, p: ', best_solution.beta, best_solution.p)
     print("De snijpunten met de x-as: ", best_solution.calc_zeropoints())
     print("The fitness of our solution: ", fitness([best_solution.beta, best_solution.p, 0, 0]))
