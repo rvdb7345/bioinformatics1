@@ -84,7 +84,7 @@ class full_model(object):
                self.intersections_bcl_PC.x], [self.intersections_blimp_GC.x, \
                self.intersections_blimp_PC.x])
 
-    def plot(self, name='test'):
+    def plot(self, name='test', gen=0):
         # intersections = np.sort(intersections)
         r_list = np.arange(0, 12, 0.001)
         drdt = self.equation_irf(r_list)
@@ -109,7 +109,7 @@ class full_model(object):
         plt.xlabel('r', fontsize=14)
         plt.ylabel('drdt', fontsize=14)
         plt.legend(fontsize=14)
-        fig.savefig("AffymetrixData{}_IRF4_kl.png".format(name.capitalize()))
+        fig.savefig("AffymetrixData{}_IRF4_kl_at{}.png".format(name.capitalize(), gen))
         plt.close(fig)
 
         fig = plt.figure()
@@ -126,7 +126,7 @@ class full_model(object):
         plt.xlabel('b', fontsize=14)
         plt.ylabel('dbdt', fontsize=14)
         plt.legend(fontsize=14)
-        fig.savefig("AffymetrixData{}_BCL_kl.png".format(name.capitalize()))
+        fig.savefig("AffymetrixData{}_BCL_kl_at{}.png".format(name.capitalize(), gen))
         plt.close(fig)
 
         fig = plt.figure()
@@ -143,7 +143,7 @@ class full_model(object):
         plt.xlabel('p', fontsize=14)
         plt.ylabel('dpdt', fontsize=14)
         plt.legend(fontsize=14)
-        fig.savefig("AffymetrixData{}_BLIMP_kl.png".format(name.capitalize()))
+        fig.savefig("AffymetrixData{}_BLIMP_kl_at{}.png".format(name.capitalize(), gen))
         plt.close(fig)
 
 def fitness(ind):
@@ -181,12 +181,12 @@ def fitness(ind):
         # print(len(a), len(b), len(inter1_data), len(inter2_data))
         # return abs(np.linalg.norm((a, inter1_data))) + \
         #        abs(np.linalg.norm((b, inter2_data))),
-        return abs(sum(min(intersections[0]) - inter1_data_IRF)) / len(inter1_data_IRF) + \
-               abs(sum(max(intersections[0]) - inter2_data_IRF)) / len(inter2_data_IRF) + \
-               abs(sum(max(intersections[1]) - inter1_data_BCL)) / len(inter1_data_BCL) + \
-               abs(sum(min(intersections[1]) - inter2_data_BCL)) / len(inter2_data_BCL) + \
-               abs(sum(min(intersections[2]) - inter1_data_BLIMP)) / len(inter1_data_BLIMP) + \
-               abs(sum(max(intersections[2]) - inter2_data_BLIMP)) / len(inter2_data_BLIMP)
+        return abs(sum((min(intersections[0]) - inter1_data_IRF)/inter1_data_IRF)) / len(inter1_data_IRF) + \
+               abs(sum((max(intersections[0]) - inter2_data_IRF)/inter2_data_IRF)) / len(inter2_data_IRF) + \
+               abs(sum((max(intersections[1]) - inter1_data_BCL)/inter1_data_BCL)) / len(inter1_data_BCL) + \
+               abs(sum((min(intersections[1]) - inter2_data_BCL)/inter2_data_BCL)) / len(inter2_data_BCL) + \
+               abs(sum((min(intersections[2]) - inter1_data_BLIMP)/inter1_data_BLIMP)) / len(inter1_data_BLIMP) + \
+               abs(sum((max(intersections[2]) - inter2_data_BLIMP)/inter2_data_BLIMP)) / len(inter2_data_BLIMP)
 
 
     else:
@@ -350,11 +350,23 @@ def run_evolutionary_algo(pop_size, num_variables, num_gen, tournament_size,
 
     best_sol_current = None
     best_fit_current = 100000000000
-    lambda_list = np.zeros(num_gen * pop_size)
-    k_list = np.zeros(num_gen * pop_size)
+    mu_r_list = np.zeros(num_gen * pop_size)
+    sigma_r_list = np.zeros(num_gen * pop_size)
+    k_r_list = np.zeros(num_gen * pop_size)
+    lambda_r_list = np.zeros(num_gen * pop_size)
+
+    mu_b_list = np.zeros(num_gen * pop_size)
+    sigma_b_list = np.zeros(num_gen * pop_size)
+    k_b_list = np.zeros(num_gen * pop_size)
+    lambda_b_list = np.zeros(num_gen * pop_size)
+
+
+    mu_p_list = np.zeros(num_gen * pop_size)
+    sigma_p_list = np.zeros(num_gen * pop_size)
+    k_p_list = np.zeros(num_gen * pop_size)
+    lambda_p_list = np.zeros(num_gen * pop_size)
+
     CD40_list = np.zeros(num_gen * pop_size)
-    mu_list = np.zeros(num_gen * pop_size)
-    sigma_list = np.zeros(num_gen * pop_size)
     fitness_list = np.zeros(num_gen * pop_size)
 
     # start evolutionary algorithm
@@ -370,11 +382,24 @@ def run_evolutionary_algo(pop_size, num_variables, num_gen, tournament_size,
         pool.close()
         pool.join()
 
-        mu_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 0]
-        CD40_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 1]
-        sigma_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 2]
-        lambda_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 3]
-        k_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 4]
+
+        # save all data about the population
+        CD40_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 0]
+
+        mu_r_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 1]
+        sigma_r_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 2]
+        k_r_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 3]
+        lambda_r_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 4]
+
+        mu_b_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 5]
+        sigma_b_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 6]
+        k_b_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 7]
+        lambda_b_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 8]
+
+        mu_p_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 9]
+        sigma_p_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 10]
+        k_p_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 11]
+        lambda_p_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 12]
 
         fitness_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = fitnesses
 
@@ -383,6 +408,11 @@ def run_evolutionary_algo(pop_size, num_variables, num_gen, tournament_size,
         if best_fit_gen < best_fit_current:
             best_sol_current = population[fitnesses.index(min(fitnesses))]
             best_fit_current = min(fitnesses)
+
+        if gen % 5 == 0:
+            best_solution = full_model(*best_sol_current[:num_variables])
+            best_solution.calc_zeropoints()
+            best_solution.plot('Ours', gen=gen)
 
         population = crossover(population, fitnesses, tournament_size, best_sol_current)
 
@@ -400,9 +430,12 @@ def run_evolutionary_algo(pop_size, num_variables, num_gen, tournament_size,
                                                                                            np.mean(fitnesses),
                                                                                            time.time() - start_time))
 
-    results = pd.DataFrame(data=np.array([sigma_list, mu_list, lambda_list, k_list, fitness_list]).T,
-                           columns=['sigma', 'mu', 'lambda', 'k_list', 'fitness'])
-    results.to_csv('IRF4_fitting_individuals_inclkandl_noscaling.csv')
+    results = pd.DataFrame(data=np.array([CD40_list, mu_r_list, sigma_r_list, k_r_list, lambda_r_list,
+                                          mu_b_list, sigma_b_list, k_b_list, lambda_b_list, mu_p_list,
+                                          sigma_p_list, k_p_list, lambda_p_list, fitness_list]).T,
+                           columns=['CD40', 'mu_r', 'sigma_r', 'k_r', 'lambda_r', 'mu_b', 'sigma_b', 'k_b', 'lambda_b',
+                                    'mu_p', 'sigma_p', 'k_p', 'lambda_p', 'fitness'])
+    results.to_csv('total_fitting_individuals_inclkandl.csv')
 
     # fig = plt.figure()
     # ax = fig.add_subplot(111, projection='3d')
@@ -429,15 +462,15 @@ if __name__ == '__main__':
     number_of_variables_to_fit = 13
     tournament_size = 100
     len_ind = number_of_variables_to_fit * 2  # times two for the sigmas
-    pop_size = 100000
-    num_gen = 200
+    pop_size = 10000
+    num_gen = 30
 
-    # affymetrix_df = pd.read_csv('matrinez_data.csv')  # change this in the initializer as well
-    affymetrix_df = pd.read_csv('wesenhagen_data.csv')
-
+    affymetrix_df = pd.read_csv('matrinez_data.csv')  # change this in the initializer as well
+    # affymetrix_df = pd.read_csv('wesenhagen_data.csv')
+    #
     affymetrix_df = affymetrix_df.set_index('Sample')
-
-    # affymetrix_df = affymetrix_df.divide(4)
+    #
+    affymetrix_df = affymetrix_df.divide(4)
 
     inter1_data_IRF = np.append(affymetrix_df.loc['CB', 'IRF4'].values, affymetrix_df.loc['CC', 'IRF4'].values)
     inter2_data_IRF = affymetrix_df.loc['PC', 'IRF4'].values
@@ -480,7 +513,7 @@ if __name__ == '__main__':
                                                     best_solution.k_p, best_solution.l_p, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                                                     0, 0, 0, 0]))
 
-    best_solution.plot('Ours')
+    best_solution.plot('Ours', gen=num_gen)
 
     mu_r = 0.1
     sigma_r = 2.6
