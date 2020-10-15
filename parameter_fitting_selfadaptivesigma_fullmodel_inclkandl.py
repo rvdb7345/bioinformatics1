@@ -21,7 +21,7 @@ from mpl_toolkits import mplot3d
 class full_model(object):
     """ A class containing the parameters, equations and necessary functions for the standard Martinez model """
 
-    def __init__(self, CD40, mu_r, sigma_r, mu_b, sigma_b, mu_p, sigma_p):
+    def __init__(self, CD40, mu_r, sigma_r, k_r, l_r, mu_b, sigma_b, k_b, l_b, mu_p, sigma_p, k_p, l_p):
         self.CD40 = CD40
 
         self.mu_r = mu_r
@@ -34,13 +34,13 @@ class full_model(object):
         self.sigma_p = sigma_p
 
         # Dissociation constant
-        self.k_p = 1
-        self.k_b = 1
-        self.k_r = 1
+        self.k_p = k_p
+        self.k_b = k_b
+        self.k_r = k_r
         # Degradation rate
-        self.l_p = 1
-        self.l_b = 1
-        self.l_r = 1
+        self.l_p = l_p
+        self.l_b = l_b
+        self.l_r = l_r
 
     def equation_irf(self, r):
         drdt = (self.mu_r + self.sigma_r * r ** 2 / (self.k_r ** 2 + r ** 2) + self.CD40 - \
@@ -109,7 +109,7 @@ class full_model(object):
         plt.xlabel('r', fontsize=14)
         plt.ylabel('drdt', fontsize=14)
         plt.legend(fontsize=14)
-        fig.savefig("AffymetrixData{}_IRF4.png".format(name.capitalize()))
+        fig.savefig("AffymetrixData{}_IRF4_kl.png".format(name.capitalize()))
         plt.close(fig)
 
         fig = plt.figure()
@@ -126,7 +126,7 @@ class full_model(object):
         plt.xlabel('b', fontsize=14)
         plt.ylabel('dbdt', fontsize=14)
         plt.legend(fontsize=14)
-        fig.savefig("AffymetrixData{}_BCL.png".format(name.capitalize()))
+        fig.savefig("AffymetrixData{}_BCL_kl.png".format(name.capitalize()))
         plt.close(fig)
 
         fig = plt.figure()
@@ -143,7 +143,7 @@ class full_model(object):
         plt.xlabel('p', fontsize=14)
         plt.ylabel('dpdt', fontsize=14)
         plt.legend(fontsize=14)
-        fig.savefig("AffymetrixData{}_BLIMP.png".format(name.capitalize()))
+        fig.savefig("AffymetrixData{}_BLIMP_kl.png".format(name.capitalize()))
         plt.close(fig)
 
 def fitness(ind):
@@ -181,7 +181,6 @@ def fitness(ind):
         # print(len(a), len(b), len(inter1_data), len(inter2_data))
         # return abs(np.linalg.norm((a, inter1_data))) + \
         #        abs(np.linalg.norm((b, inter2_data))),
-
         return abs(sum(min(intersections[0]) - inter1_data_IRF)) / len(inter1_data_IRF) + \
                abs(sum(max(intersections[0]) - inter2_data_IRF)) / len(inter2_data_IRF) + \
                abs(sum(max(intersections[1]) - inter1_data_BCL)) / len(inter1_data_BCL) + \
@@ -289,11 +288,18 @@ def tournament_selection(sols, k, fitnesses):
 def init_pop(pop_size, num_variables):
     population = np.ones((pop_size, num_variables)) * \
                  abs(np.array([np.random.normal(0.00005, 0.00025, pop_size), np.random.normal(0.1, 0.3, pop_size),
-                               np.random.normal(2.6, 3, pop_size), np.random.normal(2, 2, pop_size),
-                               np.random.normal(100, 20, pop_size), np.random.normal(0.000001, 0.000001, pop_size),
-                               np.random.normal(9, 5, pop_size),  # tot hier de
+                               np.random.normal(2.6, 3, pop_size), np.random.normal(1, 1, pop_size),
+                               np.random.normal(1, 1, pop_size), np.random.normal(2, 2, pop_size),
+                               np.random.normal(100, 20, pop_size),
+                               np.random.normal(1, 1, pop_size), np.random.normal(1, 1, pop_size),
+                               np.random.normal(0.000001, 0.000001, pop_size),
+                               np.random.normal(9, 5, pop_size),
+                               np.random.normal(1, 1, pop_size), np.random.normal(1, 1, pop_size),# tot hier de
                                # waardes van de params, rest is sigmas
                                np.random.normal(0, 20, pop_size),
+                               np.random.normal(0, 20, pop_size), np.random.normal(0, 20, pop_size),
+                               np.random.normal(0, 20, pop_size), np.random.normal(0, 20, pop_size),
+                               np.random.normal(0, 20, pop_size), np.random.normal(0, 20, pop_size),
                                np.random.normal(0, 20, pop_size), np.random.normal(0, 20, pop_size),
                                np.random.normal(0, 20, pop_size), np.random.normal(0, 20, pop_size),
                                np.random.normal(0, 20, pop_size), np.random.normal(0, 20, pop_size)]).T)
@@ -420,7 +426,7 @@ if __name__ == '__main__':
     # mutation_chance = 0.25  # needs to be changed in initializer function
     crossover_chance = 0.25
     frac_to_replace = 0.5
-    number_of_variables_to_fit = 7
+    number_of_variables_to_fit = 13
     tournament_size = 100
     len_ind = number_of_variables_to_fit * 2  # times two for the sigmas
     pop_size = 100000
@@ -458,12 +464,21 @@ if __name__ == '__main__':
     #                      12.432905080247275)
 
     print("De snijpunten met de x-as: ", best_solution.calc_zeropoints())
-    print('mu_r: {}, sigma_r: {}, mu_b: {}, sigma_b: {}, mu_p: {}, sigma_p: {}, CD40: {} '.format(best_solution.mu_r,
-          best_solution.sigma_r, best_solution.mu_b, best_solution.sigma_b, best_solution.mu_p, best_solution.sigma_p,
+    print('mu_r: {}, sigma_r: {}, k_r: {}, l_r:{}, mu_b: {}, sigma_b: {}, k_b: {}, l_b:{}, mu_p: {}, sigma_p: {}, '
+          'k_p: {}, l_p:{},'
+          'CD40: {} '.format(
+        best_solution.mu_r,
+          best_solution.sigma_r, best_solution.k_r, best_solution.l_r,best_solution.mu_b, best_solution.sigma_b,
+        best_solution.k_b, best_solution.l_b,
+        best_solution.mu_p, best_solution.sigma_p, best_solution.k_p, best_solution.l_p,
           best_solution.CD40))
     print("The fitness of our solution: ", fitness([best_solution.CD40, best_solution.mu_r, best_solution.sigma_r,
-                                                    best_solution.mu_b, best_solution.sigma_b, best_solution.mu_p,
-                                                    best_solution.sigma_p, 0, 0, 0, 0, 0, 0, 0]))
+                                                    best_solution.k_r, best_solution.l_r,
+                                                    best_solution.mu_b, best_solution.sigma_b,
+                                                    best_solution.k_b, best_solution.l_b,
+                                                    best_solution.mu_p, best_solution.sigma_p,
+                                                    best_solution.k_p, best_solution.l_p, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                                                    0, 0, 0, 0]))
 
     best_solution.plot('Ours')
 
@@ -472,6 +487,11 @@ if __name__ == '__main__':
     CD40 = 0.00001
     lambda_r = 1
     k_r = 1
+    k_p = 1
+    k_b = 1
+    l_r = 1
+    l_b =1
+    l_p = 1
     beta = mu_r + CD40 + sigma_r / (lambda_r * k_r)
     p = -sigma_r / (lambda_r * k_r) + beta
     # beta = 12.76144062324778
@@ -480,11 +500,14 @@ if __name__ == '__main__':
     sigma_b = 100
     mu_p = 10**(-6)
     sigma_p = 9
-    sol_of_martinez = full_model(CD40, mu_r, sigma_r, mu_b, sigma_b, mu_p, sigma_p)
+    sol_of_martinez = full_model(CD40, mu_r, sigma_r, k_r, l_r, mu_b, sigma_b, k_b, l_b, mu_p, sigma_p, k_p, l_p)
+
 
     print('Martinez: mu: {}, sigma: {}, k: {}, lambda: {}, CD40: {} '.format(mu_r, CD40, sigma_r, lambda_r, k_r))
     print("Location of the roots: ", sol_of_martinez.calc_zeropoints())
-    print("The fitness of the martinez solution: ", fitness([CD40, mu_r, sigma_r, mu_b, sigma_b, mu_p, sigma_p, 0,0, 0,
-                                                             0, 0, 0, 0]))
+    print("The fitness of the martinez solution: ", fitness([CD40, mu_r, sigma_r, k_r, l_r, mu_b, sigma_b, k_b,
+                                                             l_b, mu_p,
+                                                             sigma_p, k_p, l_p, 0,0, 0,
+                                                             0, 0, 0, 0, 0, 0, 0, 0, 0, 0]))
 
     sol_of_martinez.plot('Martinez')
