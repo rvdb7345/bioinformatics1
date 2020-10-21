@@ -108,10 +108,10 @@ class full_model(object):
         fig = plt.figure()
         plt.title("{}: With intersections: {}".format(name, self.intersections_irf.x))
         # plt.plot(r_list + intersections[1], drdt - drdt[0])
-        plt.plot(r_list, drdt, label='fit')
-        plt.scatter(self.intersections_irf.x, [0, 0, 0], marker='x')
+        plt.plot(r_list, drdt, label='fit', color='green')
         plt.scatter(inter1_data_IRF, np.zeros(len(inter1_data_IRF)), label='GC')
         plt.scatter(inter2_data_IRF, np.zeros(len(inter2_data_IRF)), label='PC')
+        # plt.scatter(self.intersections_irf.x, [0, 0, 0], marker='x')
         plt.axhline(y=0, color='grey', linestyle='--')
         # plt.ylim(-0.05 * 10 ** -8, 0.09 * 10 ** (-8))
         # plt.xlim(3, 12)
@@ -124,11 +124,11 @@ class full_model(object):
         fig = plt.figure()
         plt.title("{}: With intersections: {}".format(name, [self.intersections_bcl_GC.x, self.intersections_bcl_PC.x]))
         # plt.plot(r_list + intersections[1], drdt - drdt[0])
-        plt.plot(r_list, dbdt_PC, label='fit PC')
         plt.plot(r_list, dbdt_GC, label='fit GC')
-        plt.scatter([self.intersections_bcl_GC.x, self.intersections_bcl_PC.x], [0, 0], marker='x')
+        plt.plot(r_list, dbdt_PC, label='fit PC')
         plt.scatter(inter1_data_BCL, np.zeros(len(inter1_data_BCL)), label='GC')
         plt.scatter(inter2_data_BCL, np.zeros(len(inter2_data_BCL)), label='PC')
+        # plt.scatter([self.intersections_bcl_GC.x, self.intersections_bcl_PC.x], [0, 0], marker='x')
         plt.axhline(y=0, color='grey', linestyle='--')
         # plt.ylim(-0.05 * 10 ** -8, 0.09 * 10 ** (-8))
         # plt.xlim(3, 12)
@@ -141,11 +141,11 @@ class full_model(object):
         fig = plt.figure()
         plt.title("{}: With intersections: {}".format(name, [self.intersections_blimp_GC.x, self.intersections_blimp_PC.x]))
         # plt.plot(r_list + intersections[1], drdt - drdt[0])
-        plt.plot(r_list, dpdt_PC, label='fit PC')
         plt.plot(r_list, dpdt_GC, label='fit GC')
-        plt.scatter([self.intersections_blimp_GC.x, self.intersections_blimp_PC.x], [0, 0], marker='x')
+        plt.plot(r_list, dpdt_PC, label='fit PC')
         plt.scatter(inter1_data_BLIMP, np.zeros(len(inter1_data_BLIMP)), label='GC')
         plt.scatter(inter2_data_BLIMP, np.zeros(len(inter2_data_BLIMP)), label='PC')
+        # plt.scatter([self.intersections_blimp_GC.x, self.intersections_blimp_PC.x], [0, 0], marker='x')
         plt.axhline(y=0, color='grey', linestyle='--')
         # plt.ylim(-0.05 * 10 ** -8, 0.09 * 10 ** (-8))
         # plt.xlim(3, 12)
@@ -175,32 +175,26 @@ def fitness(ind):
     beta = (model_ind.mu_r + CD40 + model_ind.sigma_r) / (model_ind.l_r * model_ind.k_r)
     p = - model_ind.sigma_r / (model_ind.l_r * model_ind.k_r) + beta
 
-    # print((beta ** 2 > 3) , (beta ** 3 + (beta ** 2 - 3) ** (3 / 2) - 9 * beta / 2 > - 27 / 2 * p) , \
-    #         (beta ** 3 - (beta ** 2 - 3) ** (3 / 2) - 9 * beta / 2 < - 27 / 2 * p) , (beta > 0) , (p > 0))
-
     # instantiate an individual
     if (beta ** 2 > 3) and (beta ** 3 + (beta ** 2 - 3) ** (3 / 2) - 9 * beta / 2 > - 27 / 2 * p) and \
             (beta ** 3 - (beta ** 2 - 3) ** (3 / 2) - 9 * beta / 2 < - 27 / 2 * p) and (beta > 0) and (p > 0) \
         and (ind[0] > 0) and (ind[1] > 0) and (ind[2] > 0) and (ind[3] > 0) and (ind[4] > 0):
 
-        # return abs(sum(intersections[0] - inter1_data)) + abs(sum(intersections[2] - inter2_data)),
-        # print(np.linalg.norm(np.full((1, len(inter1_data)), intersections[0])))
-
-        # a = np.empty(len(inter1_data))
-        # a.fill(intersections[0])
-        #
-        # b = np.empty(len(inter2_data))
-        # b.fill(intersections[2])
-
-        # print(len(a), len(b), len(inter1_data), len(inter2_data))
-        # return abs(np.linalg.norm((a, inter1_data))) + \
-        #        abs(np.linalg.norm((b, inter2_data))),
+        # NORMALISED FITNESS VERION
         return abs(sum((min(intersections[0]) - inter1_data_IRF)/inter1_data_IRF)) / len(inter1_data_IRF) + \
                abs(sum((max(intersections[0]) - inter2_data_IRF)/inter2_data_IRF)) / len(inter2_data_IRF) + \
                abs(sum((max(intersections[1]) - inter1_data_BCL)/inter1_data_BCL)) / len(inter1_data_BCL) + \
                abs(sum((min(intersections[1]) - inter2_data_BCL)/inter2_data_BCL)) / len(inter2_data_BCL) + \
                abs(sum((min(intersections[2]) - inter1_data_BLIMP)/inter1_data_BLIMP)) / len(inter1_data_BLIMP) + \
                abs(sum((max(intersections[2]) - inter2_data_BLIMP)/inter2_data_BLIMP)) / len(inter2_data_BLIMP)
+
+        # ORIGINAL FITNESS VERSION
+        # return abs(sum(min(intersections[0]) - inter1_data_IRF)) / len(inter1_data_IRF) + \
+        #        abs(sum(max(intersections[0]) - inter2_data_IRF)) / len(inter2_data_IRF) + \
+        #        abs(sum(max(intersections[1]) - inter1_data_BCL)) / len(inter1_data_BCL) + \
+        #        abs(sum(min(intersections[1]) - inter2_data_BCL)) / len(inter2_data_BCL) + \
+        #        abs(sum(min(intersections[2]) - inter1_data_BLIMP)) / len(inter1_data_BLIMP) + \
+        #        abs(sum(max(intersections[2]) - inter2_data_BLIMP)) / len(inter2_data_BLIMP)
 
 
     else:
@@ -239,9 +233,6 @@ def crossover(population, fitnesses, k, best_sol):
     while child < nr_children - 2:
         parent1, idx1 = tournament_selection(population, k, fitnesses)
         parent2, idx2 = tournament_selection(population, k, fitnesses)
-        #
-        # print("parent one with idx and fitness: ", idx1, fitnesses[idx1])
-        # print("parent two with idx and fitness: ", idx2, fitnesses[idx2])
 
         # determine weights
         weights = np.zeros(len_ind)
@@ -300,17 +291,42 @@ def tournament_selection(sols, k, fitnesses):
 
 
 def init_pop(pop_size, num_variables):
+    """
+    param order: 'bcr0', 'cd0', 'mu_r', 'sigma_r', 'k_r', 'lambda_r', 'mu_b', 'sigma_b', 'k_b', 'lambda_b', 'mu_p', 'sigma_p', 'k_p', 'lambda_p'
+    """
+    # Martinez param values as initialisation
+    # population = np.ones((pop_size, num_variables)) * \
+                #  abs(np.array([np.random.normal(5, 5, pop_size),                # bcr0
+                #                np.random.normal(0.5, 0.5, pop_size),            # cd0
+                #                np.random.normal(0.1, 0.1, pop_size),            # mu_r
+                #                np.random.normal(2.6, 3, pop_size),              # sigma_r
+                #                np.random.normal(1, 1, pop_size),                # k_r
+                #                np.random.normal(1, 1, pop_size),                # lambda_r
+                #                np.random.normal(2, 2, pop_size),                # mu_b
+                #                np.random.normal(100, 20, pop_size),             # sigma_b
+                #                np.random.normal(1, 1, pop_size),                # k_b
+                #                np.random.normal(1, 1, pop_size),                # lambda_b
+                #                np.random.normal(0.000001, 0.000001, pop_size),  # mu_p
+                #                np.random.normal(9, 5, pop_size),                # sigma_p
+                #                np.random.normal(1, 1, pop_size),                # k_p
+                #                np.random.normal(1, 1, pop_size),                # lambda_p
+    # our estimates of param values
     population = np.ones((pop_size, num_variables)) * \
-                 abs(np.array([np.random.normal(5, 1, pop_size),
-                               np.random.normal(0.00005, 0.00025, pop_size), np.random.normal(0.1, 0.3, pop_size),
-                               np.random.normal(2.6, 3, pop_size), np.random.normal(1, 1, pop_size),
-                               np.random.normal(1, 1, pop_size), np.random.normal(2, 2, pop_size),
-                               np.random.normal(100, 20, pop_size),
-                               np.random.normal(1, 1, pop_size), np.random.normal(1, 1, pop_size),
-                               np.random.normal(0.000001, 0.000001, pop_size),
-                               np.random.normal(9, 5, pop_size),
-                               np.random.normal(1, 1, pop_size), np.random.normal(1, 1, pop_size),# tot hier de
-                               # waardes van de params, rest is sigmas
+                 abs(np.array([np.random.normal(5, 5, pop_size),                # bcr0
+                               np.random.normal(0.5, 0.5, pop_size),            # cd0
+                               np.random.normal(0.2279, 0.1, pop_size),         # mu_r
+                               np.random.normal(1.776, 3, pop_size),            # sigma_r
+                               np.random.normal(5.290, 1, pop_size),            # k_r
+                               np.random.normal(0.4011, 1, pop_size),           # lambda_r
+                               np.random.normal(3.990, 2, pop_size),            # mu_b
+                               np.random.normal(118.5, 20, pop_size),           # sigma_b
+                               np.random.normal(4.199, 1, pop_size),            # k_b
+                               np.random.normal(1.731, 1, pop_size),            # lambda_b
+                               np.random.normal(1.107e-6, 0.000001, pop_size),  # mu_p
+                               np.random.normal(6.275, 5, pop_size),            # sigma_p
+                               np.random.normal(3.940, 1, pop_size),            # k_p
+                               np.random.normal(0.674, 1, pop_size),            # lambda_p
+                               # ^ waardes van de params, below is sigmas
                                np.random.normal(0, 20, pop_size), np.random.normal(0, 20, pop_size),
                                np.random.normal(0, 20, pop_size), np.random.normal(0, 20, pop_size),
                                np.random.normal(0, 20, pop_size), np.random.normal(0, 20, pop_size),
@@ -479,14 +495,14 @@ if __name__ == '__main__':
     number_of_variables_to_fit = 14
     tournament_size = 100
     len_ind = number_of_variables_to_fit * 2  # times two for the sigmas
-    pop_size = 10000
-    num_gen = 50
+    pop_size = 10_000
+    num_gen = 30
 
     # affymetrix_df = pd.read_csv('matrinez_data.csv')  # change this in the initializer as well
     affymetrix_df = pd.read_csv('wesenhagen_data.csv')
-    #
+
     affymetrix_df = affymetrix_df.set_index('Sample')
-    #
+
     # affymetrix_df = affymetrix_df.divide(4)
 
     inter1_data_IRF = np.append(affymetrix_df.loc['CB', 'IRF4'].values, affymetrix_df.loc['CC', 'IRF4'].values)
@@ -534,7 +550,6 @@ if __name__ == '__main__':
 
     mu_r = 0.1
     sigma_r = 2.6
-    cd0 = 0.00001 # RECHECK!!!
     lambda_r = 1
     k_r = 1
     k_p = 1
@@ -551,6 +566,7 @@ if __name__ == '__main__':
     mu_p = 10**(-6)
     sigma_p = 9
     bcr0 = 5
+    cd0 = 0.5
     sol_of_martinez = full_model(bcr0, cd0, mu_r, sigma_r, k_r, l_r, mu_b, sigma_b, k_b, l_b, mu_p, sigma_p, k_p, l_p)
 
 
