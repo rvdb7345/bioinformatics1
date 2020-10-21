@@ -2,6 +2,7 @@ import multiprocessing
 import pandas as pd
 import numpy as np
 from multiprocessing import Pool, cpu_count
+import csv
 
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_squared_error
@@ -366,7 +367,7 @@ def initializer(d1_IRF, d2_IRF, d3_IRF, d1_BCL, d2_BCL, d3_BCL, d1_BLIMP, d2_BLI
     tau = 0.90
 
 
-def run_evolutionary_algo(pop_size, num_variables, num_gen, tournament_size,
+def run_evolutionary_algo(name_run, pop_size, num_variables, num_gen, tournament_size,
                           inter1_data_IRF, inter2_data_IRF, inter3_data_IRF,
                           inter1_data_BCL, inter2_data_BCL, inter3_data_BCL,
                           inter1_data_BLIMP, inter2_data_BLIMP, inter3_data_BLIMP):
@@ -400,6 +401,11 @@ def run_evolutionary_algo(pop_size, num_variables, num_gen, tournament_size,
     cd0_list = np.zeros(num_gen * pop_size)
     bcr0_list = np.zeros(num_gen * pop_size)
     fitness_list = np.zeros(num_gen * pop_size)
+
+    with open("data_{}.csv".format(name_run), "w") as file:
+        writer = csv.DictWriter(file, delimiter=',', fieldnames = ["generation", "fitness", 'bcr0', 'cd0', 'mu_r', 'sigma_r', 'k_r', 'lambda_r', 'mu_b', 'sigma_b', 'k_b', 'lambda_b',
+                                    'mu_p', 'sigma_p', 'k_p', 'lambda_p'])
+        writer.writeheader()
 
     # start evolutionary algorithm
     for gen in range(num_gen):
@@ -463,12 +469,16 @@ def run_evolutionary_algo(pop_size, num_variables, num_gen, tournament_size,
                                                                                            np.mean(fitnesses),
                                                                                            time.time() - start_time))
 
+        with open("data_{}.csv".format(name_run), "a") as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow([gen, best_fit_gen, *best_sol_current[:number_of_variables_to_fit]])
+    
     results = pd.DataFrame(data=np.array([bcr0_list, cd0_list, mu_r_list, sigma_r_list, k_r_list, lambda_r_list,
                                           mu_b_list, sigma_b_list, k_b_list, lambda_b_list, mu_p_list,
                                           sigma_p_list, k_p_list, lambda_p_list, fitness_list]).T,
                            columns=['bcr0', 'cd0', 'mu_r', 'sigma_r', 'k_r', 'lambda_r', 'mu_b', 'sigma_b', 'k_b', 'lambda_b',
                                     'mu_p', 'sigma_p', 'k_p', 'lambda_p', 'fitness'])
-    results.to_csv('total_fitting_individuals_inclkandl.csv')
+    results.to_csv('last_pop_{}.csv'.format(name_run))
 
     # fig = plt.figure()
     # ax = fig.add_subplot(111, projection='3d')
@@ -488,6 +498,9 @@ def run_evolutionary_algo(pop_size, num_variables, num_gen, tournament_size,
 
 
 if __name__ == '__main__':
+    # CHANGE NAME FOR NEW RUN!!!
+    name_run = "bcr0cd40_included_normalisedFitness"
+    
     # tau = 0.99   # needs to be changed in initializer function
     # mutation_chance = 0.25  # needs to be changed in initializer function
     crossover_chance = 0.25
@@ -518,7 +531,7 @@ if __name__ == '__main__':
     inter3_data_BLIMP = affymetrix_df.loc['CB', 'PRDM1'].values
 
 
-    best_fitness, best_ind = run_evolutionary_algo(pop_size, number_of_variables_to_fit, num_gen, tournament_size,
+    best_fitness, best_ind = run_evolutionary_algo(name_run, pop_size, number_of_variables_to_fit, num_gen, tournament_size,
                                                    inter1_data_IRF, inter2_data_IRF, inter3_data_IRF,
                                                    inter1_data_BCL, inter2_data_BCL, inter3_data_BCL,
                                                    inter1_data_BLIMP, inter2_data_BLIMP, inter3_data_BLIMP)
