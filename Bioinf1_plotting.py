@@ -102,7 +102,7 @@ class full_model(object):
         plt.xlabel('[IRF4] ($10^{-8}$ M)', fontsize=14)
         plt.ylabel('dr/dt ($10^{-8}$ M / 4h)', fontsize=14)
         plt.legend(fontsize=14)
-        fig.savefig("PlotsReport/{}_IRF4_fitness:{:.4f}.png".format(self.name.capitalize(), self.fitness))
+        fig.savefig("PlotsReport/{}_IRF4_fitness{:.4f}.png".format(self.name.capitalize(), self.fitness))
         plt.close(fig)
 
         if "IRF4" in self.name: return
@@ -120,7 +120,7 @@ class full_model(object):
         plt.xlabel('[BCL6] ($10^{-8}$ M)', fontsize=14)
         plt.ylabel('db/dt ($10^{-8}$ M / 4h)', fontsize=14)
         plt.legend(fontsize=14)
-        fig.savefig("PlotsReport/{}_BCL_fitness:{:.4f}.png".format(self.name.capitalize(), self.fitness))
+        fig.savefig("PlotsReport/{}_BCL_fitness{:.4f}.png".format(self.name.capitalize(), self.fitness))
         plt.close(fig)
 
         fig = plt.figure()
@@ -136,7 +136,7 @@ class full_model(object):
         plt.xlabel('[BLIMP1] ($10^{-8}$ M)', fontsize=14)
         plt.ylabel('dp/dt ($10^{-8}$ M / 4 h)', fontsize=14)
         plt.legend(fontsize=14)
-        fig.savefig("PlotsReport/{}_BLIMP_fitness:{:.4f}.png".format(self.name.capitalize(), self.fitness))
+        fig.savefig("PlotsReport/{}_BLIMP_fitness{:.4f}.png".format(self.name.capitalize(), self.fitness))
         plt.close(fig)
 
     def calc_fitness(self):
