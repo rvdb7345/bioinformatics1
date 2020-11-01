@@ -1,3 +1,5 @@
+''' Authors: Katinka den Nijs & Robin van den Berg '''
+
 import multiprocessing
 import pandas as pd
 import numpy as np
@@ -9,6 +11,7 @@ from deap import creator
 from deap import tools
 from scipy.optimize import fsolve
 import random
+
 
 class ForwardEuler(object):
     """
@@ -190,7 +193,6 @@ class CD40SubNetwork(object):
         self.dpdt_list = np.zeros(len(self.t_list))
         self.dbdt_list = np.zeros(len(self.t_list))
 
-
         solver_object = ForwardEuler(self.equations)
         solver_object.set_initial_condition([self.b0, self.p0, self.r0])
         self.soln, self.t_list = solver_object.solve(self.t_list)
@@ -228,7 +230,6 @@ class CD40SubNetwork(object):
 
         print(b[b_stablepoints], p[p_stablepoints], r[r_stablepoints])
 
-
         plt.figure()
         plt.plot(b, self.dbdt_list, label='dbdt')
         plt.plot(r, self.drdt_list, label='drdt')
@@ -257,7 +258,7 @@ def fitness(ind):
 
     # we have very little data points of the affymetrix data, but it does need to line up, so this is a first attempt
     # can probably be greatly improved tho
-    t_list = np.linspace(t_start, t_end-1, len(affymetrix_df['BCL6'])) / t_step
+    t_list = np.linspace(t_start, t_end - 1, len(affymetrix_df['BCL6'])) / t_step
     t_list_indices_affymetrix_data = list(map(int, t_list))
 
     # calculate the mse for the three components. If it one of the components has exploded into infinity, fitness is low
@@ -272,9 +273,8 @@ def fitness(ind):
 
 
 def generateES(ind_cls, strg_cls, size):
-
     ind = ind_cls(abs(random.gauss(0, 10)) for _ in range(size))
-    ind.strategy = strg_cls(abs(random.gauss(0,10)) for _ in range(size))
+    ind.strategy = strg_cls(abs(random.gauss(0, 10)) for _ in range(size))
     return ind
 
 
@@ -293,7 +293,7 @@ toolbox = base.Toolbox()
 IND_SIZE = 2
 toolbox.register("evaluate", fitness)
 toolbox.register("individual", generateES, creator.Individual, creator.Strategy,
-    IND_SIZE)
+                 IND_SIZE)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 toolbox.register("mate", tools.cxESBlend, alpha=0.1)
@@ -308,7 +308,6 @@ if __name__ == '__main__':
     # t_step = 0.01
     # soln, t_list = best_sol.time_evolution(t_start, t_end, t_step)
     # best_sol.plot_evolution()
-
 
     # plot figure showing the affymetrix data as if it is a time series
     ax = plt.gca()
@@ -344,8 +343,7 @@ if __name__ == '__main__':
     pop = toolbox.population(n=25)
 
     pop, logbook = algorithms.eaMuPlusLambda(pop, toolbox, mu=25, lambda_=150, cxpb=0.5, mutpb=0.5,
-                                              ngen=10, stats=stats, halloffame=hof, verbose=True)
-
+                                             ngen=10, stats=stats, halloffame=hof, verbose=True)
 
     # show what the best solution looks like
     best_sol = CD40SubNetwork(*hof[0])

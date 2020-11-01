@@ -1,3 +1,5 @@
+''' Authors: Katinka den Nijs & Robin van den Berg '''
+
 import multiprocessing
 from multiprocessing import Pool, cpu_count
 import pandas as pd
@@ -15,6 +17,7 @@ import math
 import time
 from numba import jit
 from tqdm import tqdm
+
 
 class params_article():
     """ Standard param settings (according to Martinez (2015)) """
@@ -48,7 +51,7 @@ class BCL6(params_article):
 
         self.p = GC_data_BLIMP
         self.r = GC_data_IRF4
-    
+
     def change_stage(self):
         # to switch between p/r-values of PC and GC stage
         if np.all(self.p == GC_data_BLIMP):
@@ -59,8 +62,10 @@ class BCL6(params_article):
             self.r = GC_data_IRF4
 
     def equation(self, b):
-        BCR = bcr0 * self.k_b**2/(self.k_b**2 + b**2)
-        dbdt = self.mu_b + (self.sigma_b * self.k_p**2)/(self.k_p**2 + np.mean(self.p)**2) * (self.k_b**2)/(self.k_b**2 + b**2) * (self.k_r**2)/(self.k_r**2 + np.mean(self.r)**2) - (self.l_p + BCR) * b
+        BCR = bcr0 * self.k_b ** 2 / (self.k_b ** 2 + b ** 2)
+        dbdt = self.mu_b + (self.sigma_b * self.k_p ** 2) / (self.k_p ** 2 + np.mean(self.p) ** 2) * (self.k_b ** 2) / (
+                    self.k_b ** 2 + b ** 2) * (self.k_r ** 2) / (self.k_r ** 2 + np.mean(self.r) ** 2) - (
+                           self.l_p + BCR) * b
         return dbdt
 
     def calc_zeropoints(self, guesses=[0]):
@@ -69,7 +74,7 @@ class BCL6(params_article):
 
     def plot(self, dataset='test', fitting='Fitted Params'):
         b_list = np.arange(0, 10, 0.001)
-        
+
         intersections_GC = self.calc_zeropoints(np.mean(GC_data_BCL6))
         dbdt_GC = self.equation(b_list)
 
@@ -80,7 +85,9 @@ class BCL6(params_article):
 
         ### STILL INCLUDE UNITS
         fig = plt.figure()
-        plt.title("BCL6 rate equation fit {}-data with {}\nIntersections: {:.2f}, {:.2f}".format(dataset, fitting, intersections_GC[0], intersections_PC[0]))
+        plt.title("BCL6 rate equation fit {}-data with {}\nIntersections: {:.2f}, {:.2f}".format(dataset, fitting,
+                                                                                                 intersections_GC[0],
+                                                                                                 intersections_PC[0]))
         plt.plot(b_list, dbdt_GC, label="fit GC")
         plt.plot(b_list, dbdt_PC, label="fit PC")
         plt.scatter(GC_data_BCL6, np.zeros(len(GC_data_BCL6)), label="data GC")
@@ -91,8 +98,9 @@ class BCL6(params_article):
         plt.ylabel("db/dt", fontsize=15)
         # plt.ylim(min(drdt), 3)
         # plt.xlim(0,8)
-        fig.savefig("BCL6DataFit{}{}_bcr{}.png".format(dataset.capitalize(), fitting.replace(" ",""), bcr0))
+        fig.savefig("BCL6DataFit{}{}_bcr{}.png".format(dataset.capitalize(), fitting.replace(" ", ""), bcr0))
         plt.close(fig)
+
 
 def fitness(ind):
     '''
@@ -184,19 +192,17 @@ toolbox = base.Toolbox()
 IND_SIZE = 2
 toolbox.register("evaluate", fitness)
 toolbox.register("individual", generateES, creator.Individual, creator.Strategy,
-    IND_SIZE)
+                 IND_SIZE)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 toolbox.register("mate", cxESBlend, alpha=0.1)
 toolbox.register("mutate", mutate, mu=0, sigma=1, indpb=1)
 toolbox.register("select", tools.selTournament, tournsize=7)
 
-
 if __name__ == '__main__':
-
     print("BCL6 fitting, bcr0 =", bcr0)
     print("{}-data".format(dataset))
-    
+
     pool = multiprocessing.Pool(multiprocessing.cpu_count())
     toolbox.register("map", pool.map)
 
@@ -211,8 +217,8 @@ if __name__ == '__main__':
     pop = toolbox.population(n=10000)
 
     pop, logbook = algorithms.eaMuPlusLambda(pop, toolbox, mu=10000, lambda_=5000, cxpb=0.1, mutpb=0.90,
-                                              ngen=10, stats=stats, halloffame=hof, verbose=True)
-    
+                                             ngen=10, stats=stats, halloffame=hof, verbose=True)
+
     best_sol = BCL6(*hof[0])
 
     best_sol.plot(dataset=dataset, fitting="Fitted Params")
@@ -221,11 +227,10 @@ if __name__ == '__main__':
     print('Fitness of our best solution: ', fitness(hof[0])[0])
 
     params_mart = [2, 100]
-    
+
     sol_mart = BCL6(*params_mart)
 
     sol_mart.plot(dataset=dataset, fitting="Martinez Params")
 
     print('mu_b and sigma_b of Martinez solution: {}, {}'.format(sol_mart.mu_b, sol_mart.sigma_b))
     print('Fitness of Martinez solution: ', fitness(params_mart)[0])
-

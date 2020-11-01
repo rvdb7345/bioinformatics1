@@ -1,3 +1,5 @@
+''' Authors: Katinka den Nijs & Robin van den Berg '''
+
 import numpy as np
 import pandas as pd
 from scipy.integrate import odeint, solve_ivp
@@ -5,6 +7,7 @@ import matplotlib.pyplot as plt
 from numba import jit
 import tqdm
 from scipy.stats import norm
+
 
 class ForwardEuler(object):
     """
@@ -65,9 +68,8 @@ class ForwardEuler(object):
 class MartinezModel(object):
     """ A class containing the parameters, equations and necessary functions for the standard Martinez model """
 
-
     def __init__(self, mu_p, sigma_p, k_p, lambda_p, mu_b, sigma_b, k_b,
-                 lambda_b, mu_r, sigma_r, k_r, lambda_r, b0, p0, r0, cd0_signal, 
+                 lambda_b, mu_r, sigma_r, k_r, lambda_r, b0, p0, r0, cd0_signal,
                  bcr0_signal, t_BCR_mean, t_BCR_std, t_cd40_mean, t_cd40_std):
 
         self.mu_p = mu_p
@@ -168,7 +170,7 @@ class MartinezModel(object):
         fig.savefig("TimeEvolutionModel.png")
         plt.close(fig)
 
-        fig = plt.figure(figsize=(10,3))
+        fig = plt.figure(figsize=(10, 3))
         plt.plot(self.t_list, self.BCR_list, label='BCR', color='orange')
         plt.plot(self.t_list, self.CD40_list, label='CD40', color='blue')
         plt.ylabel('Concentration ($10^{-8}$ M)')
@@ -245,7 +247,7 @@ class BCRSubNetwork(MartinezModel):
             dpdt = 0
 
             dbdt = self.mu_b + self.sigma_b * self.k_b ** 2 / (self.k_b ** 2 + b ** 2) * self.k_p ** 2 / \
-               (self.k_p ** 2 + p ** 2) - (self.lambda_b + BCR) * b
+                   (self.k_p ** 2 + p ** 2) - (self.lambda_b + BCR) * b
 
             drdt = self.mu_r + self.sigma_r * r ** 2 / (self.k_r ** 2 + r ** 2) + CD40 - self.lambda_r * r
 
@@ -287,7 +289,6 @@ class BCRSubNetwork(MartinezModel):
         plt.show()
 
 
-
 class CD40SubNetwork(MartinezModel):
     def equations(self, y, t, k):
         b, p, r = y
@@ -324,7 +325,6 @@ if __name__ == '__main__':
          - k: dissociation constant
          - lambda: degradation rate
     '''
-    
 
     """
     MARTINEZ PARAMS:
@@ -397,7 +397,6 @@ if __name__ == '__main__':
     lambda_b = 1.731
     lambda_r = 0.4011
 
-
     # parameters characterising the initial state
     b0 = 10
     p0 = 0
@@ -408,8 +407,8 @@ if __name__ == '__main__':
     t_step = 0.01
 
     # Gaussian bcr0 and cd0 signal settings
-    bcr0_signal = 45 # check (in output) if bcr0 at peak <10
-    cd0_signal = 8 # check (in output) if cd0 at peak <1
+    bcr0_signal = 45  # check (in output) if bcr0 at peak <10
+    cd0_signal = 8  # check (in output) if cd0 at peak <1
 
     t_BCR_mean = 40
     t_BCR_std = 7
@@ -417,10 +416,9 @@ if __name__ == '__main__':
     t_cd40_mean = 60
     t_cd40_std = 5
 
-
     MartinezModel = MartinezModel(mu_p, sigma_p, k_p, lambda_p, mu_b, sigma_b, k_b,
-                          lambda_b, mu_r, sigma_r, k_r, lambda_r, b0, p0, r0, cd0_signal, 
-                          bcr0_signal, t_BCR_mean, t_BCR_std, t_cd40_mean, t_cd40_std)
+                                  lambda_b, mu_r, sigma_r, k_r, lambda_r, b0, p0, r0, cd0_signal,
+                                  bcr0_signal, t_BCR_mean, t_BCR_std, t_cd40_mean, t_cd40_std)
 
     MartinezModel.time_evolution(t_start, t_end, t_step)
     MartinezModel.plot_evolution()

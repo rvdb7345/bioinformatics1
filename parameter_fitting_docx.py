@@ -1,3 +1,5 @@
+''' Authors: Katinka den Nijs & Robin van den Berg '''
+
 import multiprocessing
 import pandas as pd
 import numpy as np
@@ -10,6 +12,7 @@ from deap import tools
 from scipy.optimize import fsolve, root
 import random
 import math
+
 
 class ForwardEuler(object):
     """
@@ -75,9 +78,7 @@ class IRF4(object):
         self.p = p
 
     def equation(self, y):
-        # drdt = self.mu_r + self.sigma_r * r ** 2 / (self.k_r ** 2 + r ** 2) + CD40 - self.lambda_r * r
-
-        F = y**3 - self.beta * y**2 + y - self.p
+        F = y ** 3 - self.beta * y ** 2 + y - self.p
 
         return F
 
@@ -94,9 +95,10 @@ class IRF4(object):
         plt.title("{}: With intersections: {}".format(name, intersections))
         plt.plot(r_list, drdt)
         plt.scatter(intersections, np.zeros(len(intersections)))
-        plt.xlim(0,3)
-        plt.ylim(-2,1)
+        plt.xlim(0, 3)
+        plt.ylim(-2, 1)
         plt.show()
+
 
 def fitness(ind):
     '''
@@ -109,8 +111,7 @@ def fitness(ind):
     intersections = model_ind.calc_zeropoints()
     delta_intersec = abs(intersections[2] - intersections[0])
 
-    # instantiate an individual
-    if (ind[0] ** 2 > 3) and (ind[0] ** 3 + (ind[0] ** 2 - 3) ** (3/2) + 9 * ind[0] > 27/2 * ind[0] - ind[1]) and (
+    if (ind[0] ** 2 > 3) and (ind[0] ** 3 + (ind[0] ** 2 - 3) ** (3 / 2) + 9 * ind[0] > 27 / 2 * ind[0] - ind[1]) and (
             ind[0] ** 3 - (ind[0] ** 2 - 3) ** (3 / 2) + 9 * ind[0] < 27 / 2 * ind[0] - ind[1]) and \
             (delta_intersec > 0.1):
 
@@ -119,11 +120,12 @@ def fitness(ind):
     else:
         return 10000000,
 
-def generateES(ind_cls, strg_cls, size):
 
+def generateES(ind_cls, strg_cls, size):
     ind = ind_cls(abs(random.gauss(0, 2)) for _ in range(size))
     ind.strategy = strg_cls(abs(random.gauss(0, 3)) for _ in range(size))
     return ind
+
 
 def mutate(ind, mu, sigma, indpb, c=1):
     size = len(ind)
@@ -146,7 +148,7 @@ affymetrix_df = pd.read_csv('matrinez_data.csv')
 
 # # replaces df by average of all rows per sample
 # affymetrix_df = affymetrix_df.groupby('Sample').agg({'PRDM1':'mean','BCL6':'mean','IRF4':'mean'})
-affymetrix_df=affymetrix_df.set_index('Sample')
+affymetrix_df = affymetrix_df.set_index('Sample')
 inter1_data = np.append(affymetrix_df.loc['CB', 'IRF4'].values, affymetrix_df.loc['CC', 'IRF4'].values)
 inter2_data = affymetrix_df.loc['PC', 'IRF4'].values
 
@@ -158,7 +160,7 @@ toolbox = base.Toolbox()
 IND_SIZE = 2
 toolbox.register("evaluate", fitness)
 toolbox.register("individual", generateES, creator.Individual, creator.Strategy,
-    IND_SIZE)
+                 IND_SIZE)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 toolbox.register("mate", tools.cxESBlend, alpha=0.1)
@@ -182,8 +184,7 @@ if __name__ == '__main__':
     pop = toolbox.population(n=10000)
 
     pop, logbook = algorithms.eaMuPlusLambda(pop, toolbox, mu=10000, lambda_=5000, cxpb=0.1, mutpb=0.90,
-                                              ngen=40, stats=stats, halloffame=hof, verbose=True)
-
+                                             ngen=40, stats=stats, halloffame=hof, verbose=True)
 
     print('this is hof: ', hof)
     # show what the best solution looks like
@@ -201,7 +202,7 @@ if __name__ == '__main__':
     lambda_r = 1
     k_r = 1
     beta = mu_r + CD40 + sigma_r / (lambda_r * k_r)
-    p = -sigma_r/(lambda_r*k_r) + beta
+    p = -sigma_r / (lambda_r * k_r) + beta
     sol_of_martinez = IRF4(beta, p)
 
     print('Beta and p of martinez {}, {}'.format(beta, p))

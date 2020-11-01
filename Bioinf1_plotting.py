@@ -1,17 +1,21 @@
+''' Authors: Katinka den Nijs & Robin van den Berg '''
+
 import pandas as pd
 import numpy as np
 import csv
 from scipy.optimize import fsolve, root
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
+
 rcParams.update({'figure.autolayout': True})
+
 
 class full_model(object):
     """ A class containing the parameters, equations and necessary functions for the standard Martinez model """
 
     def __init__(self, name, CD40, mu_r, sigma_r, k_r, l_r, mu_b, sigma_b, k_b, l_b, mu_p, sigma_p, k_p, l_p):
         self.name = name
-        
+
         self.CD40 = CD40
 
         self.mu_r = mu_r
@@ -34,7 +38,7 @@ class full_model(object):
 
         self.fitness = self.calc_fitness()
 
-    def equation_irf(self, r):        
+    def equation_irf(self, r):
         drdt = (self.mu_r + self.sigma_r * r ** 2 / (self.k_r ** 2 + r ** 2) + self.CD40 - self.l_r * r)
 
         return drdt
@@ -47,20 +51,24 @@ class full_model(object):
         return dbdt
 
     def equation_bcl_PC(self, b):
-        dbdt = self.mu_b + (self.sigma_b * self.k_p ** 2) / (self.k_p ** 2 + np.mean(inter2_data_BLIMP) ** 2) * (self.k_b ** 2) / \
-               (self.k_b ** 2 + b ** 2) * (self.k_r ** 2) / (self.k_r ** 2 + np.mean(inter2_data_IRF) ** 2) - (self.l_p) * b
+        dbdt = self.mu_b + (self.sigma_b * self.k_p ** 2) / (self.k_p ** 2 + np.mean(inter2_data_BLIMP) ** 2) * (
+                    self.k_b ** 2) / \
+               (self.k_b ** 2 + b ** 2) * (self.k_r ** 2) / (self.k_r ** 2 + np.mean(inter2_data_IRF) ** 2) - (
+                   self.l_p) * b
 
         return dbdt
 
     def equation_blimp_GC(self, p):
         dpdt = self.mu_p + (self.sigma_p * self.k_b ** 2) / (self.k_b ** 2 + np.mean(inter1_data_BCL) ** 2) + \
-               (self.sigma_p * np.mean(inter1_data_IRF) ** 2) / (self.k_r ** 2 + np.mean(inter1_data_IRF) ** 2) - self.l_p * p
+               (self.sigma_p * np.mean(inter1_data_IRF) ** 2) / (
+                           self.k_r ** 2 + np.mean(inter1_data_IRF) ** 2) - self.l_p * p
 
         return dpdt
 
     def equation_blimp_PC(self, p):
         dpdt = self.mu_p + (self.sigma_p * self.k_b ** 2) / (self.k_b ** 2 + np.mean(inter2_data_BCL) ** 2) + \
-               (self.sigma_p * np.mean(inter2_data_IRF) ** 2) / (self.k_r ** 2 + np.mean(inter2_data_IRF) ** 2) - self.l_p * p
+               (self.sigma_p * np.mean(inter2_data_IRF) ** 2) / (
+                           self.k_r ** 2 + np.mean(inter2_data_IRF) ** 2) - self.l_p * p
 
         return dpdt
 
@@ -72,8 +80,8 @@ class full_model(object):
         self.intersections_blimp_PC = root(self.equation_blimp_PC, np.mean(inter2_data_BLIMP), method='lm')
 
         return (self.intersections_irf.x, [self.intersections_bcl_GC.x, \
-               self.intersections_bcl_PC.x], [self.intersections_blimp_GC.x, \
-               self.intersections_blimp_PC.x])
+                                           self.intersections_bcl_PC.x], [self.intersections_blimp_GC.x, \
+                                                                          self.intersections_blimp_PC.x])
 
     def plot(self):
         r_list = np.arange(0, 12, 0.001)
@@ -105,7 +113,8 @@ class full_model(object):
         plt.plot(r_list, dbdt_PC, label='fit PC')
         plt.scatter(inter1_data_BCL, np.zeros(len(inter1_data_BCL)), label='GC')
         plt.scatter(inter2_data_BCL, np.zeros(len(inter2_data_BCL)), label='PC')
-        plt.scatter([self.intersections_bcl_GC.x, self.intersections_bcl_PC.x], [0, 0], marker='d', color='black', label="roots", zorder=10)
+        plt.scatter([self.intersections_bcl_GC.x, self.intersections_bcl_PC.x], [0, 0], marker='d', color='black',
+                    label="roots", zorder=10)
         # plt.ylim(-0.05 * 10 ** -8, 0.09 * 10 ** (-8))
         # plt.xlim(3, 12)
         plt.xlabel('[BCL6] ($10^{-8}$ M)', fontsize=14)
@@ -120,7 +129,8 @@ class full_model(object):
         plt.plot(r_list, dpdt_PC, label='fit PC')
         plt.scatter(inter1_data_BLIMP, np.zeros(len(inter1_data_BLIMP)), label='GC')
         plt.scatter(inter2_data_BLIMP, np.zeros(len(inter2_data_BLIMP)), label='PC')
-        plt.scatter([self.intersections_blimp_GC.x, self.intersections_blimp_PC.x], [0, 0], marker='d', color='black', label="roots", zorder=10)
+        plt.scatter([self.intersections_blimp_GC.x, self.intersections_blimp_PC.x], [0, 0], marker='d', color='black',
+                    label="roots", zorder=10)
         # plt.ylim(-0.05 * 10 ** -8, 0.09 * 10 ** (-8))
         # plt.xlim(3, 12)
         plt.xlabel('[BLIMP1] ($10^{-8}$ M)', fontsize=14)
@@ -140,8 +150,8 @@ class full_model(object):
         intersections = self.calc_zeropoints()
 
         if "IRF4" in self.name:
-            return abs(sum((min(intersections[0]) - inter1_data_IRF)/inter1_data_IRF)) / len(inter1_data_IRF) + \
-                abs(sum((max(intersections[0]) - inter2_data_IRF)/inter2_data_IRF)) / len(inter2_data_IRF)
+            return abs(sum((min(intersections[0]) - inter1_data_IRF) / inter1_data_IRF)) / len(inter1_data_IRF) + \
+                   abs(sum((max(intersections[0]) - inter2_data_IRF) / inter2_data_IRF)) / len(inter2_data_IRF)
 
         beta = (self.mu_r + self.CD40 + self.sigma_r) / (self.l_r * self.k_r)
         p = - self.sigma_r / (self.l_r * self.k_r) + beta
@@ -150,14 +160,13 @@ class full_model(object):
         if (beta ** 2 > 3) and (beta ** 3 + (beta ** 2 - 3) ** (3 / 2) - 9 * beta / 2 > - 27 / 2 * p) and \
                 (beta ** 3 - (beta ** 2 - 3) ** (3 / 2) - 9 * beta / 2 < - 27 / 2 * p) and (beta > 0) and (p > 0):
 
-            
             # NORMALISED FITNESS VERION
-            return abs(sum((min(intersections[0]) - inter1_data_IRF)/inter1_data_IRF)) / len(inter1_data_IRF) + \
-                abs(sum((max(intersections[0]) - inter2_data_IRF)/inter2_data_IRF)) / len(inter2_data_IRF) + \
-                abs(sum((max(intersections[1]) - inter1_data_BCL)/inter1_data_BCL)) / len(inter1_data_BCL) + \
-                abs(sum((min(intersections[1]) - inter2_data_BCL)/inter2_data_BCL)) / len(inter2_data_BCL) + \
-                abs(sum((min(intersections[2]) - inter1_data_BLIMP)/inter1_data_BLIMP)) / len(inter1_data_BLIMP) + \
-                abs(sum((max(intersections[2]) - inter2_data_BLIMP)/inter2_data_BLIMP)) / len(inter2_data_BLIMP)
+            return abs(sum((min(intersections[0]) - inter1_data_IRF) / inter1_data_IRF)) / len(inter1_data_IRF) + \
+                   abs(sum((max(intersections[0]) - inter2_data_IRF) / inter2_data_IRF)) / len(inter2_data_IRF) + \
+                   abs(sum((max(intersections[1]) - inter1_data_BCL) / inter1_data_BCL)) / len(inter1_data_BCL) + \
+                   abs(sum((min(intersections[1]) - inter2_data_BCL) / inter2_data_BCL)) / len(inter2_data_BCL) + \
+                   abs(sum((min(intersections[2]) - inter1_data_BLIMP) / inter1_data_BLIMP)) / len(inter1_data_BLIMP) + \
+                   abs(sum((max(intersections[2]) - inter2_data_BLIMP) / inter2_data_BLIMP)) / len(inter2_data_BLIMP)
 
         else:
             return 10000000
@@ -175,13 +184,11 @@ if __name__ == '__main__':
     # name = "FullModFit_MartDataDiv4"
     # name = "FullModFit_WesData"
 
-
-
     if "MartData" in name:
-        affymetrix_df = pd.read_csv('matrinez_data.csv') 
+        affymetrix_df = pd.read_csv('matrinez_data.csv')
     else:
         affymetrix_df = pd.read_csv('wesenhagen_data.csv')
-    
+
     affymetrix_df = affymetrix_df.set_index('Sample')
 
     if "Div4" in name:
@@ -201,7 +208,7 @@ if __name__ == '__main__':
 
     # Standard settings (MartParams), can be overwritten
     CD40 = 0.0001
-    mu_p = 10**(-6)
+    mu_p = 10 ** (-6)
     mu_b = 2
     mu_r = 0.1
     sigma_p = 9
@@ -265,7 +272,7 @@ if __name__ == '__main__':
         lambda_p = 1.821
         lambda_b = 1.597
         lambda_r = 1.600
-    
+
     if name == "FullModFit_WesData":
         CD40 = 0.00047
         # Basal transcription rate
@@ -285,9 +292,8 @@ if __name__ == '__main__':
         lambda_b = 1.731
         lambda_r = 0.4011
 
-
-
-    model = full_model(name, CD40, mu_r, sigma_r, k_r, lambda_r, mu_b, sigma_b, k_b, lambda_b, mu_p, sigma_p, k_p, lambda_p)
+    model = full_model(name, CD40, mu_r, sigma_r, k_r, lambda_r, mu_b, sigma_b, k_b, lambda_b, mu_p, sigma_p, k_p,
+                       lambda_p)
 
     print("Name    = ", name)
     print("Fitness = ", model.fitness)

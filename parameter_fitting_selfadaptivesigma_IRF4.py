@@ -1,3 +1,5 @@
+''' Authors: Katinka den Nijs & Robin van den Berg '''
+
 import multiprocessing
 import pandas as pd
 import numpy as np
@@ -18,7 +20,6 @@ from mpl_toolkits import mplot3d
 import csv
 
 
-
 class IRF4(object):
     """ A class containing the parameters, equations and necessary functions for the standard Martinez model """
 
@@ -29,10 +30,9 @@ class IRF4(object):
         self.k_r = 1
         self.CD40 = CD40
 
-
     def equation(self, r):
         drdt = (self.mu_r + self.sigma_r * r ** 2 / (self.k_r ** 2 + r ** 2) + self.CD40 - \
-               self.lambda_r * r)
+                self.lambda_r * r)
 
         return drdt
 
@@ -49,7 +49,7 @@ class IRF4(object):
         fig = plt.figure()
         plt.title("{}: With intersections: {}".format(name, intersections))
         plt.plot(r_list, drdt, label='fit', color='green')
-        plt.scatter(intersections, [0,0,0], marker='x')
+        plt.scatter(intersections, [0, 0, 0], marker='x')
         plt.scatter(CB_sep_data, np.zeros(len(CB_sep_data)), label='CB')
         plt.scatter(CC_sep_data, np.zeros(len(CC_sep_data)), label='CC')
         plt.scatter(PC_data, np.zeros(len(PC_data)), label='PC')
@@ -62,6 +62,7 @@ class IRF4(object):
         fig.savefig("IRF4_mu_sigma_{}.png".format(name.capitalize()))
         plt.close(fig)
 
+
 def fitness(ind):
     '''
     Calculates the fitness of an individual as the mse on the time series
@@ -69,7 +70,7 @@ def fitness(ind):
     :return: the fitness of an individual, the lower the better tho
     '''
 
-    ind = ind[:int(len(ind)/2)]
+    ind = ind[:int(len(ind) / 2)]
 
     model_ind = IRF4(*ind)
     intersections = model_ind.calc_zeropoints()
@@ -81,26 +82,24 @@ def fitness(ind):
     beta = (mu_r + CD40 + sigma_r) / (lambda_r * k_r)
     p = - sigma_r / (lambda_r * k_r) + beta
 
-    # instantiate an individual
-    if (beta ** 2 > 3) and (beta ** 3 + (beta ** 2 - 3) ** (3/2) - 9 * beta / 2 > - 27/2 * p) and \
-            (beta ** 3 - (beta ** 2 - 3) ** (3 / 2) - 9 * beta / 2 < - 27/2 * p) and (beta > 0) and (p > 0) and \
+    if (beta ** 2 > 3) and (beta ** 3 + (beta ** 2 - 3) ** (3 / 2) - 9 * beta / 2 > - 27 / 2 * p) and \
+            (beta ** 3 - (beta ** 2 - 3) ** (3 / 2) - 9 * beta / 2 < - 27 / 2 * p) and (beta > 0) and (p > 0) and \
             (mu_r > 0) and (sigma_r > 0) and (CD40 >= 0):
 
-        return abs(sum((intersections[0] - GC_data)/GC_data)) / len(GC_data) + \
-               abs(sum((intersections[2] - PC_data)/PC_data)) / len(PC_data)
+        return abs(sum((intersections[0] - GC_data) / GC_data)) / len(GC_data) + \
+               abs(sum((intersections[2] - PC_data) / PC_data)) / len(PC_data)
 
     else:
         return 1000
 
 
-# @jit(nopython=True)
 def mutation(child):
     """
     Performs self-adaptive mutation
     """
 
     if np.random.random() < mutation_chance:
-        num_of_sigmas = int(len(child)/2)
+        num_of_sigmas = int(len(child) / 2)
 
         # get new mutation step size for all parameters
         child[num_of_sigmas:] = child[num_of_sigmas:] * np.exp(tau * np.random.normal(0, 1))
@@ -122,7 +121,7 @@ def crossover(population, fitnesses, k, best_sol):
     indices_replaced = np.zeros(nr_children)
 
     # start making offspring (two for each couple of parents)
-    while child < nr_children-2:
+    while child < nr_children - 2:
         parent1, idx1 = tournament_selection(population, k, fitnesses)
         parent2, idx2 = tournament_selection(population, k, fitnesses)
 
@@ -139,7 +138,7 @@ def crossover(population, fitnesses, k, best_sol):
         ind_to_be_replaced_2, idx_replace2 = tournament_selection_worst(population, k, fitnesses, indices_replaced)
 
         indices_replaced[child] = idx_replace1
-        indices_replaced[child+1] = idx_replace2
+        indices_replaced[child + 1] = idx_replace2
 
         population[idx_replace1] = abs(offspring1)
         population[idx_replace2] = abs(offspring2)
@@ -184,12 +183,12 @@ def tournament_selection(sols, k, fitnesses):
 
 def init_pop(pop_size, num_variables):
     population = np.ones((pop_size, num_variables)) * \
-        abs(np.array([np.random.normal(0.1, 0.1, pop_size), 
-                      np.random.normal(2.6, 3, pop_size),  
-                      np.random.normal(0.5, 0.5, pop_size),
-                      # ^ de waardes van de params (volgens Martinez), rest is sigmas
-                      np.random.normal(0, 20, pop_size), np.random.normal(0, 20, pop_size),
-                      np.random.normal(0, 20, pop_size)]).T)
+                 abs(np.array([np.random.normal(0.1, 0.1, pop_size),
+                               np.random.normal(2.6, 3, pop_size),
+                               np.random.normal(0.5, 0.5, pop_size),
+                               # ^ de waardes van de params (volgens Martinez), rest is sigmas
+                               np.random.normal(0, 20, pop_size), np.random.normal(0, 20, pop_size),
+                               np.random.normal(0, 20, pop_size)]).T)
     return population
 
 
@@ -207,10 +206,11 @@ def initializer(pop_size, d1, d2, d3, d4):
     CC_sep_data = d4
 
     mutation_chance = 0.25
-    tau = 1/math.sqrt(pop_size)
+    tau = 1 / math.sqrt(pop_size)
 
 
-def run_evolutionary_algo(name_run, pop_size, num_variables, num_gen, tournament_size, GC_data, PC_data, CB_sep_data, CC_sep_data):
+def run_evolutionary_algo(name_run, pop_size, num_variables, num_gen, tournament_size, GC_data, PC_data, CB_sep_data,
+                          CC_sep_data):
     """
     Run evolutionary algorithm in parallel
     """
@@ -218,17 +218,16 @@ def run_evolutionary_algo(name_run, pop_size, num_variables, num_gen, tournament
     len_ind = num_variables * 2
 
     population = init_pop(pop_size=pop_size, num_variables=len_ind)
-    # pool_input = [tuple(ind) for ind in population]
 
     best_sol_current = None
     best_fit_current = 100000000000
-    mu_list = np.zeros(num_gen*pop_size)
+    mu_list = np.zeros(num_gen * pop_size)
     sigma_list = np.zeros(num_gen * pop_size)
-    CD40_list = np.zeros(num_gen*pop_size)
+    CD40_list = np.zeros(num_gen * pop_size)
     fitness_list = np.zeros(num_gen * pop_size)
 
     with open("IRF4data_mu_sigma_{}.csv".format(name_run), "w") as file:
-        writer = csv.DictWriter(file, delimiter=',', fieldnames = ["generation", "fitness", 'mu_r', 'sigma_r', 'CD40'])
+        writer = csv.DictWriter(file, delimiter=',', fieldnames=["generation", "fitness", 'mu_r', 'sigma_r', 'CD40'])
         writer.writeheader()
 
     # start evolutionary algorithm
@@ -264,36 +263,19 @@ def run_evolutionary_algo(name_run, pop_size, num_variables, num_gen, tournament
         pool.close()
         pool.join()
 
-
         print("Best fit and average fit at gen {}: \t {}, \t {}, time to run it {}".format(gen, best_fit_gen,
                                                                                            np.mean(fitnesses),
-                                                                                           time.time()-start_time))
+                                                                                           time.time() - start_time))
 
         with open("IRF4data_mu_sigma_{}.csv".format(name_run), "a") as file:
             writer = csv.writer(file, delimiter=',')
             writer.writerow([gen, best_fit_gen, *best_sol_current[:number_of_variables_to_fit]])
 
-
-    results = pd.DataFrame(data=np.array([sigma_list, mu_list,  CD40_list, fitness_list]).T,
+    results = pd.DataFrame(data=np.array([sigma_list, mu_list, CD40_list, fitness_list]).T,
                            columns=['sigma', 'mu', 'CD40', 'fitness'])
     results.to_csv('IRF4_last_pop_{}.csv'.format(name_run))
 
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # scat = ax.scatter3D(betas_list, p_list, zs=fitness_list, c=fitness_list,  cmap='hot', marker='.')
-    # ax.set_xlabel('beta', fontweight='bold')
-    # ax.set_ylabel('p', fontweight='bold')
-    # ax.set_zlabel('fitness', fontweight='bold')
-    # ax.set_xlim([0,12])
-    # ax.set_ylim([0,0.1])
-    # ax.set_zlim([0,12])
-    # fig.colorbar(scat, ax=ax)
-    #
-    # plt.title("Fitnesses in Solution Space")
-    # plt.show()
-
     return best_fit_current, best_sol_current
-
 
 
 if __name__ == '__main__':
@@ -322,17 +304,17 @@ if __name__ == '__main__':
     CB_sep_data = affymetrix_df.loc['CB', 'IRF4'].values
     CC_sep_data = affymetrix_df.loc['CC', 'IRF4'].values
 
-    best_fitness, best_ind = run_evolutionary_algo(name_run, pop_size, number_of_variables_to_fit, num_gen, tournament_size,
+    best_fitness, best_ind = run_evolutionary_algo(name_run, pop_size, number_of_variables_to_fit, num_gen,
+                                                   tournament_size,
                                                    GC_data, PC_data, CB_sep_data, CC_sep_data)
 
     best_solution = IRF4(*best_ind[:number_of_variables_to_fit])
-    # best_solution = IRF4(24.024979315717964, 0.05407750794340739, 204.30287870879206, 10.45117254171176,
-    #                      12.432905080247275)
 
     print('mu: {}, sigma: {}, CD40: {} '.format(best_solution.mu_r, best_solution.sigma_r,
-                                                                   best_solution.CD40))
+                                                best_solution.CD40))
     print("De snijpunten met de x-as: ", best_solution.calc_zeropoints())
-    print("The fitness of our solution: ", fitness([best_solution.mu_r, best_solution.sigma_r, best_solution.CD40, 0, 0, 0]))
+    print("The fitness of our solution: ",
+          fitness([best_solution.mu_r, best_solution.sigma_r, best_solution.CD40, 0, 0, 0]))
 
     best_solution.plot(name_run)
 
@@ -343,8 +325,6 @@ if __name__ == '__main__':
     lambda_r = 1
     beta = mu_r + CD40 + sigma_r / (lambda_r * k_r)
     p = -sigma_r / (lambda_r * k_r) + beta
-    # beta = 12.76144062324778
-    # p = 0.004582577456956276
     sol_of_martinez = IRF4(mu_r, sigma_r, CD40)
 
     print('Martinez: mu: {}, sigma: {}, k: {}, lambda: {}, CD40: {} '.format(mu_r, sigma_r, k_r, lambda_r, CD40))

@@ -1,3 +1,5 @@
+''' Authors: Katinka den Nijs & Robin van den Berg '''
+
 import multiprocessing
 import pandas as pd
 import numpy as np
@@ -47,15 +49,15 @@ class full_model(object):
     def equation_irf(self, r):
         # BCL6 CONCENTRATION AT LOWEST FOR HIGHEST POSSIBLE CD40 LEVEL
         b = np.mean(inter2_data_BCL)
-    
-        CD40 = self.cd0 * self.k_b**2/(self.k_b**2 + b**2)
-        
+
+        CD40 = self.cd0 * self.k_b ** 2 / (self.k_b ** 2 + b ** 2)
+
         drdt = (self.mu_r + self.sigma_r * r ** 2 / (self.k_r ** 2 + r ** 2) + CD40 - self.l_r * r)
 
         return drdt
 
     def equation_bcl_GC(self, b):
-        BCR = self.bcr0 * self.k_b**2/(self.k_b**2 + b**2)
+        BCR = self.bcr0 * self.k_b ** 2 / (self.k_b ** 2 + b ** 2)
 
         dbdt = self.mu_b + (self.sigma_b * self.k_p ** 2) / (self.k_p ** 2 + np.mean(inter1_data_BLIMP) ** 2) * (
                 self.k_b ** 2) / (self.k_b ** 2 + b ** 2) * (self.k_r ** 2) / \
@@ -64,22 +66,26 @@ class full_model(object):
         return dbdt
 
     def equation_bcl_PC(self, b):
-        BCR = self.bcr0 * self.k_b**2/(self.k_b**2 + b**2)
+        BCR = self.bcr0 * self.k_b ** 2 / (self.k_b ** 2 + b ** 2)
 
-        dbdt = self.mu_b + (self.sigma_b * self.k_p ** 2) / (self.k_p ** 2 + np.mean(inter2_data_BLIMP) ** 2) * (self.k_b ** 2) / \
-               (self.k_b ** 2 + b ** 2) * (self.k_r ** 2) / (self.k_r ** 2 + np.mean(inter2_data_IRF) ** 2) - (self.l_p + BCR) * b
+        dbdt = self.mu_b + (self.sigma_b * self.k_p ** 2) / (self.k_p ** 2 + np.mean(inter2_data_BLIMP) ** 2) * (
+                    self.k_b ** 2) / \
+               (self.k_b ** 2 + b ** 2) * (self.k_r ** 2) / (self.k_r ** 2 + np.mean(inter2_data_IRF) ** 2) - (
+                           self.l_p + BCR) * b
 
         return dbdt
 
     def equation_blimp_GC(self, p):
         dpdt = self.mu_p + (self.sigma_p * self.k_b ** 2) / (self.k_b ** 2 + np.mean(inter1_data_BCL) ** 2) + \
-               (self.sigma_p * np.mean(inter1_data_IRF) ** 2) / (self.k_r ** 2 + np.mean(inter1_data_IRF) ** 2) - self.l_p * p
+               (self.sigma_p * np.mean(inter1_data_IRF) ** 2) / (
+                           self.k_r ** 2 + np.mean(inter1_data_IRF) ** 2) - self.l_p * p
 
         return dpdt
 
     def equation_blimp_PC(self, p):
         dpdt = self.mu_p + (self.sigma_p * self.k_b ** 2) / (self.k_b ** 2 + np.mean(inter2_data_BCL) ** 2) + \
-               (self.sigma_p * np.mean(inter2_data_IRF) ** 2) / (self.k_r ** 2 + np.mean(inter2_data_IRF) ** 2) - self.l_p * p
+               (self.sigma_p * np.mean(inter2_data_IRF) ** 2) / (
+                           self.k_r ** 2 + np.mean(inter2_data_IRF) ** 2) - self.l_p * p
 
         return dpdt
 
@@ -91,8 +97,8 @@ class full_model(object):
         self.intersections_blimp_PC = root(self.equation_blimp_PC, np.mean(inter2_data_BLIMP), method='lm')
 
         return (self.intersections_irf.x, [self.intersections_bcl_GC.x, \
-               self.intersections_bcl_PC.x], [self.intersections_blimp_GC.x, \
-               self.intersections_blimp_PC.x])
+                                           self.intersections_bcl_PC.x], [self.intersections_blimp_GC.x, \
+                                                                          self.intersections_blimp_PC.x])
 
     def plot(self, name='test', gen=0):
         # intersections = np.sort(intersections)
@@ -102,8 +108,6 @@ class full_model(object):
         dbdt_PC = self.equation_bcl_PC(r_list)
         dpdt_GC = self.equation_blimp_GC(r_list)
         dpdt_PC = self.equation_blimp_PC(r_list)
-
-
 
         # intersections = self.intersections.x
         fig = plt.figure()
@@ -140,7 +144,8 @@ class full_model(object):
         plt.close(fig)
 
         fig = plt.figure()
-        plt.title("{}: With intersections: {}".format(name, [self.intersections_blimp_GC.x, self.intersections_blimp_PC.x]))
+        plt.title(
+            "{}: With intersections: {}".format(name, [self.intersections_blimp_GC.x, self.intersections_blimp_PC.x]))
         # plt.plot(r_list + intersections[1], drdt - drdt[0])
         plt.plot(r_list, dpdt_GC, label='fit GC')
         plt.plot(r_list, dpdt_PC, label='fit PC')
@@ -155,6 +160,7 @@ class full_model(object):
         plt.legend(fontsize=14)
         fig.savefig("AffymetrixData{}_BLIMP_kl_at{}.png".format(name.capitalize(), gen))
         plt.close(fig)
+
 
 def fitness(ind):
     '''
@@ -171,7 +177,7 @@ def fitness(ind):
     # BCL6 CONCENTRATION AT LOWEST FOR HIGHEST POSSIBLE CD40 LEVEL
     b = np.mean(inter2_data_BCL)
 
-    CD40 = model_ind.cd0 * model_ind.k_b**2/(model_ind.k_b**2 + b**2)
+    CD40 = model_ind.cd0 * model_ind.k_b ** 2 / (model_ind.k_b ** 2 + b ** 2)
 
     beta = (model_ind.mu_r + CD40 + model_ind.sigma_r) / (model_ind.l_r * model_ind.k_r)
     p = - model_ind.sigma_r / (model_ind.l_r * model_ind.k_r) + beta
@@ -179,30 +185,20 @@ def fitness(ind):
     # instantiate an individual
     if (beta ** 2 > 3) and (beta ** 3 + (beta ** 2 - 3) ** (3 / 2) - 9 * beta / 2 > - 27 / 2 * p) and \
             (beta ** 3 - (beta ** 2 - 3) ** (3 / 2) - 9 * beta / 2 < - 27 / 2 * p) and (beta > 0) and (p > 0) \
-        and (ind[0] > 0) and (ind[1] > 0) and (ind[2] > 0) and (ind[3] > 0) and (ind[4] > 0):
+            and (ind[0] > 0) and (ind[1] > 0) and (ind[2] > 0) and (ind[3] > 0) and (ind[4] > 0):
 
         # NORMALISED FITNESS VERION
-        return abs(sum((min(intersections[0]) - inter1_data_IRF)/inter1_data_IRF)) / len(inter1_data_IRF) + \
-               abs(sum((max(intersections[0]) - inter2_data_IRF)/inter2_data_IRF)) / len(inter2_data_IRF) + \
-               abs(sum((max(intersections[1]) - inter1_data_BCL)/inter1_data_BCL)) / len(inter1_data_BCL) + \
-               abs(sum((min(intersections[1]) - inter2_data_BCL)/inter2_data_BCL)) / len(inter2_data_BCL) + \
-               abs(sum((min(intersections[2]) - inter1_data_BLIMP)/inter1_data_BLIMP)) / len(inter1_data_BLIMP) + \
-               abs(sum((max(intersections[2]) - inter2_data_BLIMP)/inter2_data_BLIMP)) / len(inter2_data_BLIMP)
-
-        # ORIGINAL FITNESS VERSION
-        # return abs(sum(min(intersections[0]) - inter1_data_IRF)) / len(inter1_data_IRF) + \
-        #        abs(sum(max(intersections[0]) - inter2_data_IRF)) / len(inter2_data_IRF) + \
-        #        abs(sum(max(intersections[1]) - inter1_data_BCL)) / len(inter1_data_BCL) + \
-        #        abs(sum(min(intersections[1]) - inter2_data_BCL)) / len(inter2_data_BCL) + \
-        #        abs(sum(min(intersections[2]) - inter1_data_BLIMP)) / len(inter1_data_BLIMP) + \
-        #        abs(sum(max(intersections[2]) - inter2_data_BLIMP)) / len(inter2_data_BLIMP)
-
+        return abs(sum((min(intersections[0]) - inter1_data_IRF) / inter1_data_IRF)) / len(inter1_data_IRF) + \
+               abs(sum((max(intersections[0]) - inter2_data_IRF) / inter2_data_IRF)) / len(inter2_data_IRF) + \
+               abs(sum((max(intersections[1]) - inter1_data_BCL) / inter1_data_BCL)) / len(inter1_data_BCL) + \
+               abs(sum((min(intersections[1]) - inter2_data_BCL) / inter2_data_BCL)) / len(inter2_data_BCL) + \
+               abs(sum((min(intersections[2]) - inter1_data_BLIMP) / inter1_data_BLIMP)) / len(inter1_data_BLIMP) + \
+               abs(sum((max(intersections[2]) - inter2_data_BLIMP) / inter2_data_BLIMP)) / len(inter2_data_BLIMP)
 
     else:
         return 10000000
 
 
-# @jit(nopython=True)
 def mutation(child):
     """
     Performs self-adaptive mutation
@@ -297,36 +293,36 @@ def init_pop(pop_size, num_variables):
     """
     # Martinez param values as initialisation
     # population = np.ones((pop_size, num_variables)) * \
-                #  abs(np.array([np.random.normal(5, 5, pop_size),                # bcr0
-                #                np.random.normal(0.5, 0.5, pop_size),            # cd0
-                #                np.random.normal(0.1, 0.1, pop_size),            # mu_r
-                #                np.random.normal(2.6, 3, pop_size),              # sigma_r
-                #                np.random.normal(1, 1, pop_size),                # k_r
-                #                np.random.normal(1, 1, pop_size),                # lambda_r
-                #                np.random.normal(2, 2, pop_size),                # mu_b
-                #                np.random.normal(100, 20, pop_size),             # sigma_b
-                #                np.random.normal(1, 1, pop_size),                # k_b
-                #                np.random.normal(1, 1, pop_size),                # lambda_b
-                #                np.random.normal(0.000001, 0.000001, pop_size),  # mu_p
-                #                np.random.normal(9, 5, pop_size),                # sigma_p
-                #                np.random.normal(1, 1, pop_size),                # k_p
-                #                np.random.normal(1, 1, pop_size),                # lambda_p
+    #  abs(np.array([np.random.normal(5, 5, pop_size),                # bcr0
+    #                np.random.normal(0.5, 0.5, pop_size),            # cd0
+    #                np.random.normal(0.1, 0.1, pop_size),            # mu_r
+    #                np.random.normal(2.6, 3, pop_size),              # sigma_r
+    #                np.random.normal(1, 1, pop_size),                # k_r
+    #                np.random.normal(1, 1, pop_size),                # lambda_r
+    #                np.random.normal(2, 2, pop_size),                # mu_b
+    #                np.random.normal(100, 20, pop_size),             # sigma_b
+    #                np.random.normal(1, 1, pop_size),                # k_b
+    #                np.random.normal(1, 1, pop_size),                # lambda_b
+    #                np.random.normal(0.000001, 0.000001, pop_size),  # mu_p
+    #                np.random.normal(9, 5, pop_size),                # sigma_p
+    #                np.random.normal(1, 1, pop_size),                # k_p
+    #                np.random.normal(1, 1, pop_size),                # lambda_p
     # our estimates of param values
     population = np.ones((pop_size, num_variables)) * \
-                 abs(np.array([np.random.normal(5, 5, pop_size),                # bcr0
-                               np.random.normal(0.5, 0.5, pop_size),            # cd0
-                               np.random.normal(0.2279, 0.1, pop_size),         # mu_r
-                               np.random.normal(1.776, 3, pop_size),            # sigma_r
-                               np.random.normal(5.290, 1, pop_size),            # k_r
-                               np.random.normal(0.4011, 1, pop_size),           # lambda_r
-                               np.random.normal(3.990, 2, pop_size),            # mu_b
-                               np.random.normal(118.5, 20, pop_size),           # sigma_b
-                               np.random.normal(4.199, 1, pop_size),            # k_b
-                               np.random.normal(1.731, 1, pop_size),            # lambda_b
+                 abs(np.array([np.random.normal(5, 5, pop_size),  # bcr0
+                               np.random.normal(0.5, 0.5, pop_size),  # cd0
+                               np.random.normal(0.2279, 0.1, pop_size),  # mu_r
+                               np.random.normal(1.776, 3, pop_size),  # sigma_r
+                               np.random.normal(5.290, 1, pop_size),  # k_r
+                               np.random.normal(0.4011, 1, pop_size),  # lambda_r
+                               np.random.normal(3.990, 2, pop_size),  # mu_b
+                               np.random.normal(118.5, 20, pop_size),  # sigma_b
+                               np.random.normal(4.199, 1, pop_size),  # k_b
+                               np.random.normal(1.731, 1, pop_size),  # lambda_b
                                np.random.normal(1.107e-6, 0.000001, pop_size),  # mu_p
-                               np.random.normal(6.275, 5, pop_size),            # sigma_p
-                               np.random.normal(3.940, 1, pop_size),            # k_p
-                               np.random.normal(0.674, 1, pop_size),            # lambda_p
+                               np.random.normal(6.275, 5, pop_size),  # sigma_p
+                               np.random.normal(3.940, 1, pop_size),  # k_p
+                               np.random.normal(0.674, 1, pop_size),  # lambda_p
                                # ^ waardes van de params, below is sigmas
                                np.random.normal(0, 20, pop_size), np.random.normal(0, 20, pop_size),
                                np.random.normal(0, 20, pop_size), np.random.normal(0, 20, pop_size),
@@ -392,7 +388,6 @@ def run_evolutionary_algo(name_run, pop_size, num_variables, num_gen, tournament
     k_b_list = np.zeros(num_gen * pop_size)
     lambda_b_list = np.zeros(num_gen * pop_size)
 
-
     mu_p_list = np.zeros(num_gen * pop_size)
     sigma_p_list = np.zeros(num_gen * pop_size)
     k_p_list = np.zeros(num_gen * pop_size)
@@ -403,8 +398,10 @@ def run_evolutionary_algo(name_run, pop_size, num_variables, num_gen, tournament
     fitness_list = np.zeros(num_gen * pop_size)
 
     with open("data_{}.csv".format(name_run), "w") as file:
-        writer = csv.DictWriter(file, delimiter=',', fieldnames = ["generation", "fitness", 'bcr0', 'cd0', 'mu_r', 'sigma_r', 'k_r', 'lambda_r', 'mu_b', 'sigma_b', 'k_b', 'lambda_b',
-                                    'mu_p', 'sigma_p', 'k_p', 'lambda_p'])
+        writer = csv.DictWriter(file, delimiter=',',
+                                fieldnames=["generation", "fitness", 'bcr0', 'cd0', 'mu_r', 'sigma_r', 'k_r',
+                                            'lambda_r', 'mu_b', 'sigma_b', 'k_b', 'lambda_b',
+                                            'mu_p', 'sigma_p', 'k_p', 'lambda_p'])
         writer.writeheader()
 
     # start evolutionary algorithm
@@ -414,12 +411,11 @@ def run_evolutionary_algo(name_run, pop_size, num_variables, num_gen, tournament
 
         # run the different solutions in parallel
         pool = Pool(cpu_count(), initializer, (inter1_data_IRF, inter2_data_IRF, inter3_data_IRF,
-                          inter1_data_BCL, inter2_data_BCL, inter3_data_BCL,
-                          inter1_data_BLIMP, inter2_data_BLIMP, inter3_data_BLIMP))
+                                               inter1_data_BCL, inter2_data_BCL, inter3_data_BCL,
+                                               inter1_data_BLIMP, inter2_data_BLIMP, inter3_data_BLIMP))
         fitnesses = pool.map(fitness, pool_input)
         pool.close()
         pool.join()
-
 
         # save all data about the population
         bcr0_list[gen * len(fitnesses): (gen + 1) * len(fitnesses)] = np.array(population)[:, 0]
@@ -459,8 +455,8 @@ def run_evolutionary_algo(name_run, pop_size, num_variables, num_gen, tournament
 
         # run the different solutions in parallel
         pool = Pool(cpu_count(), initializer, (inter1_data_IRF, inter2_data_IRF, inter3_data_IRF,
-                          inter1_data_BCL, inter2_data_BCL, inter3_data_BCL,
-                          inter1_data_BLIMP, inter2_data_BLIMP, inter3_data_BLIMP))
+                                               inter1_data_BCL, inter2_data_BCL, inter3_data_BCL,
+                                               inter1_data_BLIMP, inter2_data_BLIMP, inter3_data_BLIMP))
         population = pool.map(mutation, pool_input)
         pool.close()
         pool.join()
@@ -472,27 +468,14 @@ def run_evolutionary_algo(name_run, pop_size, num_variables, num_gen, tournament
         with open("data_{}.csv".format(name_run), "a") as file:
             writer = csv.writer(file, delimiter=',')
             writer.writerow([gen, best_fit_gen, *best_sol_current[:number_of_variables_to_fit]])
-    
+
     results = pd.DataFrame(data=np.array([bcr0_list, cd0_list, mu_r_list, sigma_r_list, k_r_list, lambda_r_list,
                                           mu_b_list, sigma_b_list, k_b_list, lambda_b_list, mu_p_list,
                                           sigma_p_list, k_p_list, lambda_p_list, fitness_list]).T,
-                           columns=['bcr0', 'cd0', 'mu_r', 'sigma_r', 'k_r', 'lambda_r', 'mu_b', 'sigma_b', 'k_b', 'lambda_b',
+                           columns=['bcr0', 'cd0', 'mu_r', 'sigma_r', 'k_r', 'lambda_r', 'mu_b', 'sigma_b', 'k_b',
+                                    'lambda_b',
                                     'mu_p', 'sigma_p', 'k_p', 'lambda_p', 'fitness'])
     results.to_csv('last_pop_{}.csv'.format(name_run))
-
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # scat = ax.scatter3D(betas_list, p_list, zs=fitness_list, c=fitness_list,  cmap='hot', marker='.')
-    # ax.set_xlabel('beta', fontweight='bold')
-    # ax.set_ylabel('p', fontweight='bold')
-    # ax.set_zlabel('fitness', fontweight='bold')
-    # ax.set_xlim([0,12])
-    # ax.set_ylim([0,0.1])
-    # ax.set_zlim([0,12])
-    # fig.colorbar(scat, ax=ax)
-    #
-    # plt.title("Fitnesses in Solution Space")
-    # plt.show()
 
     return best_fit_current, best_sol_current
 
@@ -500,7 +483,7 @@ def run_evolutionary_algo(name_run, pop_size, num_variables, num_gen, tournament
 if __name__ == '__main__':
     # CHANGE NAME FOR NEW RUN!!!
     name_run = "bcr0cd40_included_normalisedFitness"
-    
+
     # tau = 0.99   # needs to be changed in initializer function
     # mutation_chance = 0.25  # needs to be changed in initializer function
     crossover_chance = 0.25
@@ -530,34 +513,31 @@ if __name__ == '__main__':
     inter2_data_BLIMP = affymetrix_df.loc['PC', 'PRDM1'].values
     inter3_data_BLIMP = affymetrix_df.loc['CB', 'PRDM1'].values
 
-
-    best_fitness, best_ind = run_evolutionary_algo(name_run, pop_size, number_of_variables_to_fit, num_gen, tournament_size,
+    best_fitness, best_ind = run_evolutionary_algo(name_run, pop_size, number_of_variables_to_fit, num_gen,
+                                                   tournament_size,
                                                    inter1_data_IRF, inter2_data_IRF, inter3_data_IRF,
                                                    inter1_data_BCL, inter2_data_BCL, inter3_data_BCL,
                                                    inter1_data_BLIMP, inter2_data_BLIMP, inter3_data_BLIMP)
 
-    # def __init__(cd0, mu_r, sigma_r, mu_b, sigma_b, mu_p, sigma_p):
-
     best_solution = full_model(*best_ind[:number_of_variables_to_fit])
-    # best_solution = IRF4(24.024979315717964, 0.05407750794340739, 204.30287870879206, 10.45117254171176,
-    #                      12.432905080247275)
 
     print("De snijpunten met de x-as: ", best_solution.calc_zeropoints())
     print('mu_r: {}, sigma_r: {}, k_r: {}, l_r:{}, mu_b: {}, sigma_b: {}, k_b: {}, l_b:{}, mu_p: {}, sigma_p: {}, '
           'k_p: {}, l_p:{},'
           'cd0: {}, bcr0: {}'.format(
         best_solution.mu_r,
-          best_solution.sigma_r, best_solution.k_r, best_solution.l_r,best_solution.mu_b, best_solution.sigma_b,
+        best_solution.sigma_r, best_solution.k_r, best_solution.l_r, best_solution.mu_b, best_solution.sigma_b,
         best_solution.k_b, best_solution.l_b,
         best_solution.mu_p, best_solution.sigma_p, best_solution.k_p, best_solution.l_p,
-          best_solution.cd0, best_solution.bcr0))
-    print("The fitness of our solution: ", fitness([best_solution.bcr0, best_solution.CD40, best_solution.mu_r, best_solution.sigma_r,
-                                                    best_solution.k_r, best_solution.l_r,
-                                                    best_solution.mu_b, best_solution.sigma_b,
-                                                    best_solution.k_b, best_solution.l_b,
-                                                    best_solution.mu_p, best_solution.sigma_p,
-                                                    best_solution.k_p, best_solution.l_p, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                                                    0, 0, 0, 0, 0]))
+        best_solution.cd0, best_solution.bcr0))
+    print("The fitness of our solution: ",
+          fitness([best_solution.bcr0, best_solution.CD40, best_solution.mu_r, best_solution.sigma_r,
+                   best_solution.k_r, best_solution.l_r,
+                   best_solution.mu_b, best_solution.sigma_b,
+                   best_solution.k_b, best_solution.l_b,
+                   best_solution.mu_p, best_solution.sigma_p,
+                   best_solution.k_p, best_solution.l_p, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                   0, 0, 0, 0, 0]))
 
     best_solution.plot('Ours', gen=num_gen)
 
@@ -568,22 +548,18 @@ if __name__ == '__main__':
     k_p = 1
     k_b = 1
     l_r = 1
-    l_b =1
+    l_b = 1
     l_p = 1
-    # beta = mu_r + CD40 + sigma_r / (lambda_r * k_r)
-    # p = -sigma_r / (lambda_r * k_r) + beta
-    # beta = 12.76144062324778
-    # p = 0.004582577456956276
-    mu_b =2
+    mu_b = 2
     sigma_b = 100
-    mu_p = 10**(-6)
+    mu_p = 10 ** (-6)
     sigma_p = 9
     bcr0 = 5
     cd0 = 0.5
     sol_of_martinez = full_model(bcr0, cd0, mu_r, sigma_r, k_r, l_r, mu_b, sigma_b, k_b, l_b, mu_p, sigma_p, k_p, l_p)
 
-
-    print('Martinez: mu: {}, sigma: {}, k: {}, lambda: {}, cd0: {}, bcr0: {}'.format(mu_r, sigma_r, k_r, lambda_r, cd0, bcr0))
+    print('Martinez: mu: {}, sigma: {}, k: {}, lambda: {}, cd0: {}, bcr0: {}'.format(mu_r, sigma_r, k_r, lambda_r, cd0,
+                                                                                     bcr0))
     print("Location of the roots: ", sol_of_martinez.calc_zeropoints())
     print("The fitness of the martinez solution: ", fitness([bcr0, cd0, mu_r, sigma_r, k_r, l_r, mu_b, sigma_b, k_b,
                                                              l_b, mu_p,

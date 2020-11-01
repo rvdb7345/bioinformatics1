@@ -1,3 +1,5 @@
+''' Authors: Katinka den Nijs & Robin van den Berg '''
+
 import multiprocessing
 import pandas as pd
 import numpy as np
@@ -11,6 +13,7 @@ from deap import cma
 from scipy.optimize import fsolve, root
 import random
 import math
+
 
 class ForwardEuler(object):
     """
@@ -82,10 +85,8 @@ class IRF4(object):
         self.k_r = k_r
 
     def equation(self, y):
-        drdt = self.mu_r + self.sigma_r * y*self.k_r ** 2 / (self.k_r ** 2 + y*self.k_r ** 2) + self.CD40 - \
-               self.lambda_r * y*self.k_r
-
-        # F = y**3 - self.beta * y**2 + y - self.p
+        drdt = self.mu_r + self.sigma_r * (y * self.k_r) ** 2 / (self.k_r ** 2 + (y * self.k_r) ** 2) + self.CD40 - \
+               self.lambda_r * (y * self.k_r)
 
         return drdt
 
@@ -104,7 +105,7 @@ class IRF4(object):
         plt.title("{}: With intersections: {}".format(name, intersections))
         # plt.plot(r_list + intersections[1], drdt - drdt[0])
         plt.plot(r_list, drdt)
-        plt.scatter(intersections, [0,0,0])
+        plt.scatter(intersections, [0, 0, 0])
         plt.scatter(inter1_data, np.zeros(len(inter1_data)))
         plt.scatter(inter2_data, np.zeros(len(inter2_data)))
         plt.axhline(y=0, color='grey', linestyle='--')
@@ -112,6 +113,7 @@ class IRF4(object):
         # plt.xlim(0,8)
         fig.savefig("AffymetrixData{}.png".format(name.capitalize()))
         plt.close(fig)
+
 
 def fitness(ind):
     '''
@@ -122,20 +124,13 @@ def fitness(ind):
 
     model_ind = IRF4(*ind)
     intersections = model_ind.calc_zeropoints()
-    delta_intersec = abs(intersections[2] - intersections[0])
-
-    # mu_r, CD40, sigma_r, lambda_r, k_r
 
     beta = (ind[0] + ind[1] + ind[2]) / (ind[3] * ind[4])
     p = - ind[2] / (ind[3] * ind[4]) + beta
 
-    # instantiate an individual
-    if (beta ** 2 > 3) and (beta ** 3 + (beta ** 2 - 3) ** (3/2) - 9 * beta / 2 > - 27/2 * p) and \
-            (beta ** 3 - (beta ** 2 - 3) ** (3 / 2) - 9 * beta / 2 < - 27/2 * p) and \
+    if (beta ** 2 > 3) and (beta ** 3 + (beta ** 2 - 3) ** (3 / 2) - 9 * beta / 2 > - 27 / 2 * p) and \
+            (beta ** 3 - (beta ** 2 - 3) ** (3 / 2) - 9 * beta / 2 < - 27 / 2 * p) and \
             (intersections[2] - intersections[0] > 0.1):
-
-        # return abs(sum(intersections[0] - inter1_data)) + abs(sum(intersections[2] - inter2_data)),
-        # print(np.linalg.norm(np.full((1, len(inter1_data)), intersections[0])))
 
         a = np.empty(len(inter1_data))
         a.fill(intersections[0])
@@ -143,20 +138,17 @@ def fitness(ind):
         b = np.empty(len(inter2_data))
         b.fill(intersections[2])
 
-        # print(len(a), len(b), len(inter1_data), len(inter2_data))
-        # return abs(np.linalg.norm((a, inter1_data))) + \
-        #        abs(np.linalg.norm((b, inter2_data))),
         return abs(sum(intersections[0] - inter1_data)) + abs(sum(intersections[2] - inter2_data)),
 
     else:
         return 10000000,
 
+
 def generateES(ind_cls, strg_cls, size):
-    # ind = ind_cls([abs(np.random.normal(5, 3)), abs(np.random.normal(5, 3)), abs(np.random.normal(5, 3)),
-    #                abs(np.random.normal(5, 3)), abs(np.random.normal(5, 3))])
     ind = ind_cls(abs(random.gauss(0, 2)) for _ in range(size))
     ind.strategy = strg_cls(abs(random.gauss(0, 5)) for _ in range(size))
     return ind
+
 
 def mutate(ind, mu, sigma, indpb, c=1):
     size = len(ind)
@@ -172,6 +164,7 @@ def mutate(ind, mu, sigma, indpb, c=1):
             ind[indx] = abs(ind[indx])
 
     return ind,
+
 
 def cxESBlend(ind1, ind2, alpha):
     """Executes a blend crossover on both, the individual and the strategy. The
@@ -204,12 +197,8 @@ def cxESBlend(ind1, ind2, alpha):
 affymetrix_df = pd.read_csv('matrinez_data.csv')
 # affymetrix_df = pd.read_csv('wesenhagen_data.csv')
 
-# # replaces df by average of all rows per sample
-# affymetrix_df = affymetrix_df.groupby('Sample').agg({'PRDM1':'mean','BCL6':'mean','IRF4':'mean'})
-affymetrix_df=affymetrix_df.set_index('Sample')
-# inter1_data = np.append(affymetrix_df.loc['CB', 'IRF4'].values, affymetrix_df.loc['CC', 'IRF4'].values)
-inter1_data = affymetrix_df.loc['CC', 'IRF4'].values
-
+affymetrix_df = affymetrix_df.set_index('Sample')
+inter1_data = np.append(affymetrix_df.loc['CB', 'IRF4'].values, affymetrix_df.loc['CC', 'IRF4'].values)
 inter2_data = affymetrix_df.loc['PC', 'IRF4'].values
 
 creator.create("Strategy", np.ndarray)
@@ -220,7 +209,7 @@ toolbox = base.Toolbox()
 IND_SIZE = 5
 toolbox.register("evaluate", fitness)
 toolbox.register("individual", generateES, creator.Individual, creator.Strategy,
-    IND_SIZE)
+                 IND_SIZE)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 toolbox.register("mate", cxESBlend, alpha=0.1)
@@ -244,46 +233,33 @@ if __name__ == '__main__':
     pop = toolbox.population(n=100000)
 
     pop, logbook = algorithms.eaMuPlusLambda(pop, toolbox, mu=100000, lambda_=50000, cxpb=0.5, mutpb=0.50,
-                                              ngen=20, stats=stats, halloffame=hof, verbose=True)
+                                             ngen=20, stats=stats, halloffame=hof, verbose=True)
 
     print('The ultimate roots would be: ', np.mean(inter1_data), np.mean(inter2_data))
 
-    # show what the best solution looks like
-    # print(hof)
     best_sol = IRF4(*hof[0])
-    # mu_r, CD40, sigma_r, lambda_r, k_r
 
     print("The parameters of our best fit are:\n mu_r: {}, k_r: {}, sigma_r: {}, CD40: {}, lambda_r: {} ".format(
-          best_sol.mu_r, best_sol.k_r, best_sol.sigma_r, best_sol.CD40, best_sol.lambda_r))
-    # print('Beta and p of our solution: {}, {}'.format(best_sol.beta, best_sol.p))
-    # sigma_r = best_sol.beta - best_sol.p
-    # mu_r = best_sol.beta - sigma_r
-    # print('sigma_r and mu_r of our solution: {}, {}'.format(sigma_r, mu_r))
+        best_sol.mu_r, best_sol.k_r, best_sol.sigma_r, best_sol.CD40, best_sol.lambda_r))
+
     print("Location of the roots: ", best_sol.calc_zeropoints())
     print('Fitness of our best solution: ', fitness(hof[0])[0])
 
     best_sol.plot('ours')
 
-    # overal_best = IRF4(-0.09013576441252273, 8.783827150133703e-06, 0.17601592902632068, 0.0317307058645795, 0.3840437319981567)
-    # print("Location of the roots: ", overal_best.calc_zeropoints())
-    # print('Fitness of our best solution: ', fitness([-0.09013576441252273, 8.783827150133703e-06,
-    #                                                  0.17601592902632068, 0.0317307058645795, 0.3840437319981567])[0])
-    #
-    # overal_best.plot('ours')
 
-    #
-    # mu_r = 0.1
-    # sigma_r = 2.6
-    # CD40 = 0
-    # lambda_r = 1
-    # k_r = 1
-    # beta = mu_r + CD40 + sigma_r / (lambda_r * k_r)
-    # p = -sigma_r/(lambda_r*k_r) + beta
-    # sol_of_martinez = IRF4(beta, p)
-    #
-    # print('Beta and p of martinez: {}, {}'.format(beta, p))
-    # print('sigma_r and mu_r of martinez: {}, {}'.format(sigma_r, mu_r))
-    # print("Location of the roots: ", sol_of_martinez.calc_zeropoints())
-    # print("The fitness of the martinez solution: ", fitness([beta, p])[0])
-    #
-    # sol_of_martinez.plot('martinez')
+    mu_r = 0.1
+    sigma_r = 2.6
+    CD40 = 0
+    lambda_r = 1
+    k_r = 1
+    beta = mu_r + CD40 + sigma_r / (lambda_r * k_r)
+    p = -sigma_r/(lambda_r*k_r) + beta
+    sol_of_martinez = IRF4(beta, p)
+
+    print('Beta and p of martinez: {}, {}'.format(beta, p))
+    print('sigma_r and mu_r of martinez: {}, {}'.format(sigma_r, mu_r))
+    print("Location of the roots: ", sol_of_martinez.calc_zeropoints())
+    print("The fitness of the martinez solution: ", fitness([beta, p])[0])
+
+    sol_of_martinez.plot('martinez')

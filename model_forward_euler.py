@@ -1,9 +1,12 @@
+''' Authors: Katinka den Nijs & Robin van den Berg '''
+
 import numpy as np
 import pandas as pd
 from scipy.integrate import odeint, solve_ivp
 import matplotlib.pyplot as plt
 from numba import jit
 import tqdm
+
 
 class ForwardEuler(object):
     """
@@ -63,7 +66,6 @@ class ForwardEuler(object):
 
 class MartinezModel(object):
     """ A class containing the parameters, equations and necessary functions for the standard Martinez model """
-
 
     def __init__(self, mu_p, sigma_p, k_p, lambda_p, mu_b, sigma_b, k_b,
                  lambda_b, mu_r, sigma_r, k_r, lambda_r, b0, p0, r0, cd0_signal, bcr0_signal, t_BCR_begin,
@@ -236,7 +238,7 @@ class BCRSubNetwork(MartinezModel):
             dpdt = 0
 
             dbdt = self.mu_b + self.sigma_b * self.k_b ** 2 / (self.k_b ** 2 + b ** 2) * self.k_p ** 2 / \
-               (self.k_p ** 2 + p ** 2) - (self.lambda_b + BCR) * b
+                   (self.k_p ** 2 + p ** 2) - (self.lambda_b + BCR) * b
 
             drdt = self.mu_r + self.sigma_r * r ** 2 / (self.k_r ** 2 + r ** 2) + CD40 - self.lambda_r * r
 
@@ -276,7 +278,6 @@ class BCRSubNetwork(MartinezModel):
         plt.ylabel('BLIMP1')
         plt.legend()
         plt.show()
-
 
 
 class CD40SubNetwork(MartinezModel):
@@ -401,13 +402,11 @@ if __name__ == '__main__':
     # full_model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'k_b', np.arange(0, 15, 1))
     # full_model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'k_r', np.arange(0, 3, 0.2))
 
-
     # t_1 = np.arange(0,2+1)
     # t_2 = np.arange(2, 3, 0.05)
     # t_3 = np.arange(3, 5)
     # np.append(t_1, np.append(t_2, t_3))
     # full_model.sensitivity_analysis(t_start, t_end, t_step, 'bcl6', 'bcr0_signal', np.arange(0, 50))
-
 
     # t_BCR_begin = t_start
     # t_BCR_end = t_end+1
@@ -416,8 +415,8 @@ if __name__ == '__main__':
     # t_cd40_end = 0
     #
     BCR_network_model = BCRSubNetwork(mu_p, sigma_p, k_p, lambda_p, mu_b, sigma_b, k_b,
-                          lambda_b, b0, p0, r0, cd0_signal, bcr0_signal, t_BCR_begin,
-                          t_BCR_end, t_cd40_begin, t_cd40_end)
+                                      lambda_b, b0, p0, r0, cd0_signal, bcr0_signal, t_BCR_begin,
+                                      t_BCR_end, t_cd40_begin, t_cd40_end)
 
     # BCR_network_model.time_evolution(t_start, t_end, t_step)
     # BCR_network_model.plot_evolution()

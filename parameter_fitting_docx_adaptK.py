@@ -1,3 +1,5 @@
+''' Authors: Katinka den Nijs & Robin van den Berg '''
+
 import multiprocessing
 import pandas as pd
 import numpy as np
@@ -10,6 +12,7 @@ from deap import tools
 from scipy.optimize import fsolve, root
 import random
 import math
+
 
 class ForwardEuler(object):
     """
@@ -75,9 +78,7 @@ class IRF4(object):
         self.p = p
 
     def equation(self, y):
-        # drdt = self.mu_r + self.sigma_r * r ** 2 / (self.k_r ** 2 + r ** 2) + CD40 - self.lambda_r * r
-
-        F = y**3 - self.beta * y**2 + y - self.p
+        F = y ** 3 - self.beta * y ** 2 + y - self.p
 
         return F
 
@@ -96,18 +97,19 @@ class IRF4(object):
         plt.title("{}: With intersections: {}".format(name, intersections))
         # plt.plot(r_list + intersections[1], drdt - drdt[0])
         plt.plot(r_list, drdt, label='fit')
-        plt.scatter(intersections, [0,0,0])
+        plt.scatter(intersections, [0, 0, 0])
         plt.scatter(inter1_data, np.zeros(len(inter1_data)), label='CC')
         plt.scatter(inter3_data, np.zeros(len(inter3_data)), label='CB')
         plt.scatter(inter2_data, np.zeros(len(inter2_data)), label='PC')
         plt.axhline(y=0, color='grey', linestyle='--')
         plt.ylim(min(drdt), 3)
-        plt.xlim(0,5)
+        plt.xlim(0, 5)
         plt.xlabel('r', fontsize=14)
         plt.ylabel('drdt', fontsize=14)
         plt.legend(fontsize=14)
         fig.savefig("AffymetrixData{}.png".format(name.capitalize()))
         plt.close(fig)
+
 
 def fitness(ind):
     '''
@@ -118,36 +120,29 @@ def fitness(ind):
 
     model_ind = IRF4(*ind)
     intersections = model_ind.calc_zeropoints()
-    delta_intersec = abs(intersections[2] - intersections[0])
 
-    # instantiate an individual
-    if (ind[0] ** 2 > 3) and (ind[0] ** 3 + (ind[0] ** 2 - 3) ** (3/2) - 9 * ind[0] / 2 > - 27/2 * ind[1]) and \
-            (ind[0] ** 3 - (ind[0] ** 2 - 3) ** (3 / 2) - 9 * ind[0] / 2 < - 27/2 * ind[1]) and \
+    if (ind[0] ** 2 > 3) and (ind[0] ** 3 + (ind[0] ** 2 - 3) ** (3 / 2) - 9 * ind[0] / 2 > - 27 / 2 * ind[1]) and \
+            (ind[0] ** 3 - (ind[0] ** 2 - 3) ** (3 / 2) - 9 * ind[0] / 2 < - 27 / 2 * ind[1]) and \
             (intersections[2] - intersections[0] > 0.2):
-
-        # return abs(sum(intersections[0] - inter1_data)) + abs(sum(intersections[2] - inter2_data)),
-        # print(np.linalg.norm(np.full((1, len(inter1_data)), intersections[0])))
 
         a = np.empty(len(inter1_data))
         a.fill(intersections[0])
 
-
         b = np.empty(len(inter2_data))
         b.fill(intersections[2])
 
-        # print(len(a), len(b), len(inter1_data), len(inter2_data))
-        # return abs(np.linalg.norm((a, inter1_data))) + \
-        #        abs(np.linalg.norm((b, inter2_data))),
         return abs(sum(intersections[0] - inter1_data)) + abs(sum(intersections[2] - inter2_data)),
 
 
     else:
         return 10000000,
 
+
 def generateES(ind_cls, strg_cls, size):
     ind = ind_cls(abs(random.gauss(0, 2)) for _ in range(size))
     ind.strategy = strg_cls(abs(random.gauss(0, 3)) for _ in range(size))
     return ind
+
 
 def mutate(ind, mu, sigma, indpb, c=1):
     size = len(ind)
@@ -171,7 +166,7 @@ affymetrix_df = pd.read_csv('matrinez_data.csv')
 
 # # replaces df by average of all rows per sample
 # affymetrix_df = affymetrix_df.groupby('Sample').agg({'PRDM1':'mean','BCL6':'mean','IRF4':'mean'})
-affymetrix_df=affymetrix_df.set_index('Sample')
+affymetrix_df = affymetrix_df.set_index('Sample')
 # inter1_data = np.append(affymetrix_df.loc['CB', 'IRF4'].values, affymetrix_df.loc['CC', 'IRF4'].values)
 inter1_data = affymetrix_df.loc['CC', 'IRF4'].values
 inter3_data = affymetrix_df.loc['CB', 'IRF4'].values
@@ -185,7 +180,7 @@ toolbox = base.Toolbox()
 IND_SIZE = 2
 toolbox.register("evaluate", fitness)
 toolbox.register("individual", generateES, creator.Individual, creator.Strategy,
-    IND_SIZE)
+                 IND_SIZE)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 toolbox.register("mate", tools.cxESBlend, alpha=0.1)
@@ -209,7 +204,7 @@ if __name__ == '__main__':
     pop = toolbox.population(n=10000)
 
     pop, logbook = algorithms.eaMuPlusLambda(pop, toolbox, mu=10000, lambda_=5000, cxpb=0.1, mutpb=0.90,
-                                              ngen=50, stats=stats, halloffame=hof, verbose=True)
+                                             ngen=50, stats=stats, halloffame=hof, verbose=True)
 
     print('The ultimate roots would be: ', np.mean(inter1_data), np.mean(inter2_data))
 
@@ -230,7 +225,7 @@ if __name__ == '__main__':
     lambda_r = 1
     k_r = 1
     beta = mu_r + CD40 + sigma_r / (lambda_r * k_r)
-    p = -sigma_r/(lambda_r*k_r) + beta
+    p = -sigma_r / (lambda_r * k_r) + beta
     sol_of_martinez = IRF4(beta, p)
 
     print('Beta and p of martinez: {}, {}'.format(beta, p))

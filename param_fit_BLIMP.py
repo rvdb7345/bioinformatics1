@@ -1,3 +1,5 @@
+''' Authors: Katinka den Nijs & Robin van den Berg '''
+
 import multiprocessing
 from multiprocessing import Pool, cpu_count
 import pandas as pd
@@ -15,6 +17,7 @@ import math
 import time
 from numba import jit
 from tqdm import tqdm
+
 
 class params_article():
     """ Standard param settings (according to Martinez (2015)) """
@@ -48,7 +51,7 @@ class BLIMP1(params_article):
 
         self.b = GC_data_BCL6
         self.r = GC_data_IRF4
-    
+
     def change_stage(self):
         # to switch between b/r-values of PC and GC stage
         if np.all(self.b == GC_data_BCL6):
@@ -59,7 +62,8 @@ class BLIMP1(params_article):
             self.r = GC_data_IRF4
 
     def equation(self, p):
-        dpdt = self.mu_p + (self.sigma_p * self.k_b**2)/(self.k_b**2 + np.mean(self.b)**2) + (self.sigma_p * (np.mean(self.r))**2)/(self.k_r**2 + np.mean(self.r)**2) - self.l_p * p
+        dpdt = self.mu_p + (self.sigma_p * self.k_b ** 2) / (self.k_b ** 2 + np.mean(self.b) ** 2) + (
+                    self.sigma_p * (np.mean(self.r)) ** 2) / (self.k_r ** 2 + np.mean(self.r) ** 2) - self.l_p * p
         return dpdt
 
     def calc_zeropoints(self, guesses=[0]):
@@ -68,7 +72,7 @@ class BLIMP1(params_article):
 
     def plot(self, dataset='test', fitting="Fitted Params"):
         p_list = np.arange(0, 10, 0.001)
-        
+
         intersections_GC = self.calc_zeropoints(np.mean(GC_data_BLIMP))
         dpdt_GC = self.equation(p_list)
 
@@ -79,7 +83,9 @@ class BLIMP1(params_article):
 
         ### STILL INCLUDE UNITS
         fig = plt.figure()
-        plt.title("BLIMP rate equation fit {}-data with {}\nIntersections: {:.2f}, {:.2f}".format(dataset, fitting, intersections_GC[0], intersections_PC[0]))
+        plt.title("BLIMP rate equation fit {}-data with {}\nIntersections: {:.2f}, {:.2f}".format(dataset, fitting,
+                                                                                                  intersections_GC[0],
+                                                                                                  intersections_PC[0]))
         plt.plot(p_list, dpdt_GC, label="fit GC")
         plt.plot(p_list, dpdt_PC, label="fit PC")
         plt.scatter(GC_data_BLIMP, np.zeros(len(GC_data_BLIMP)), label="data GC")
@@ -90,8 +96,9 @@ class BLIMP1(params_article):
         plt.ylabel("dP/dt", fontsize=15)
         # plt.ylim(min(drdt), 3)
         # plt.xlim(0,8)
-        fig.savefig("BLIMPDataFit{}{}.png".format(dataset.capitalize(), fitting.replace(" ","")))
+        fig.savefig("BLIMPDataFit{}{}.png".format(dataset.capitalize(), fitting.replace(" ", "")))
         plt.close(fig)
+
 
 def fitness(ind):
     '''
@@ -110,7 +117,7 @@ def fitness(ind):
 
 def mutate(ind, mu, sigma, indpb, c=1):
     """ Adapted mutate function of deap package; only non-negative values permitted """
-    
+
     size = len(ind)
     t = c / math.sqrt(2. * math.sqrt(size))
     t0 = c / math.sqrt(2. * size)
@@ -134,7 +141,7 @@ def generateES(ind_cls, strg_cls, size):
 
 def cxESBlend(ind1, ind2, alpha):
     """ Adapted cxESBlend of deap package; only non-negative values permitted """
-    
+
     for i, (x1, s1, x2, s2) in enumerate(zip(ind1, ind1.strategy,
                                              ind2, ind2.strategy)):
         # Blend the values
@@ -178,19 +185,17 @@ toolbox = base.Toolbox()
 IND_SIZE = 2
 toolbox.register("evaluate", fitness)
 toolbox.register("individual", generateES, creator.Individual, creator.Strategy,
-    IND_SIZE)
+                 IND_SIZE)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
 toolbox.register("mate", cxESBlend, alpha=0.1)
 toolbox.register("mutate", mutate, mu=0, sigma=1, indpb=1)
 toolbox.register("select", tools.selTournament, tournsize=7)
 
-
 if __name__ == '__main__':
-
     print("BLIMP fitting")
     print("{}-data".format(dataset))
-    
+
     pool = multiprocessing.Pool(multiprocessing.cpu_count())
     toolbox.register("map", pool.map)
 
@@ -205,8 +210,8 @@ if __name__ == '__main__':
     pop = toolbox.population(n=10000)
 
     pop, logbook = algorithms.eaMuPlusLambda(pop, toolbox, mu=10000, lambda_=5000, cxpb=0.1, mutpb=0.90,
-                                              ngen=30, stats=stats, halloffame=hof, verbose=True)
-    
+                                             ngen=30, stats=stats, halloffame=hof, verbose=True)
+
     best_sol = BLIMP1(*hof[0])
 
     best_sol.plot(dataset=dataset, fitting="Fitted Params")
@@ -215,11 +220,10 @@ if __name__ == '__main__':
     print('Fitness of our best solution: ', fitness(hof[0])[0])
 
     params_mart = [10e-6, 9]
-    
+
     sol_mart = BLIMP1(*params_mart)
 
     sol_mart.plot(dataset=dataset, fitting="Martinez Params")
 
     print('mu_p and sigma_p of Martinez solution: {}, {}'.format(sol_mart.mu_p, sol_mart.sigma_p))
     print('Fitness of Martinez solution: ', fitness(params_mart)[0])
-
